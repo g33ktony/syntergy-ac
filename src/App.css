@@ -1,55 +1,351 @@
 .app {
-  max-width: 40rem;
+  --ink: #1a1f24;
+  --muted: #4a5560;
+  --line: rgba(26, 31, 36, 0.12);
+  --accent: #0e6b6b;
+  --accent-soft: #d7ecec;
+  --surface: rgba(255, 255, 255, 0.72);
+  --danger: #9b2c2c;
+  --ok: #1b6b3a;
+
+  max-width: 72rem;
   margin: 0 auto;
-  padding: 2.5rem 1.25rem 4rem;
+  padding: 2.25rem 1.25rem 4rem;
+}
+
+.app-header {
+  margin-bottom: 2rem;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: clamp(2.25rem, 6vw, 3.25rem);
-  letter-spacing: -0.03em;
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-size: clamp(2.4rem, 7vw, 3.5rem);
+  letter-spacing: -0.04em;
   font-weight: 700;
+  line-height: 1.05;
 }
 
 .tagline {
-  margin: 0.5rem 0 0;
-  color: #4a5560;
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  max-width: 34rem;
+  font-size: 1.05rem;
+}
+
+.settings-panel {
+  margin-top: 1rem;
+}
+
+.settings-toggle {
+  font-size: 0.95rem;
+}
+
+.settings-body {
+  margin-top: 0.85rem;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--line);
   max-width: 28rem;
 }
 
-.catalog {
-  margin-top: 2.5rem;
-}
-
-.catalog h2 {
-  margin: 0 0 1rem;
-  font-size: 1.1rem;
+.settings-body h2,
+.trip-controls h2,
+.route-manager h2 {
+  margin: 0 0 0.35rem;
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-size: 1.15rem;
   font-weight: 600;
 }
 
-.vehicle-list {
-  list-style: none;
+.section-lead {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.trip-controls,
+.route-manager {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.controls-grid {
+  display: grid;
+  gap: 1rem 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field span {
+  font-weight: 500;
+}
+
+.field input,
+.field select,
+.settings-form input {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+
+.field input:focus,
+.field select:focus,
+.settings-form input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, white);
+  outline-offset: 1px;
+}
+
+.mode-toggle {
+  border: 0;
   margin: 0;
   padding: 0;
+  min-width: 14rem;
+}
+
+.mode-toggle legend {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+  padding: 0;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.segmented button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.segmented button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.field input[type='range'] {
+  padding: 0;
+  accent-color: var(--accent);
+  background: transparent;
+  border: 0;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-text {
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn-primary,
+.btn-secondary {
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-secondary {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 25%, white);
+}
+
+.btn-text {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  padding: 0.25rem 0;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.route-form {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  align-items: end;
+}
+
+.google-form {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--line);
+}
+
+.google-form h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+}
+
+.form-error {
+  color: var(--danger);
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+}
+
+.form-hint {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.custom-route-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.custom-route-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+
+.slots {
+  margin-top: 2.25rem;
   display: grid;
   gap: 1.25rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.vehicle-list > li {
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid rgba(26, 31, 36, 0.12);
+@media (max-width: 900px) {
+  .slots {
+    grid-template-columns: 1fr;
+  }
 }
 
-.type {
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  color: #5a6670;
+.vehicle-slot {
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.slot-index {
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.slot-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.result-card {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+.metrics-label {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
-.versions {
-  margin: 0.4rem 0 0;
-  padding-left: 1.1rem;
-  color: #333b42;
-  font-size: 0.95rem;
+.metrics dl {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.metrics dl > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-size: 0.92rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.metrics dt {
+  color: var(--muted);
+}
+
+.metrics dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.soc-ok {
+  color: var(--ok);
+}
+
+.soc-low {
+  color: var(--danger);
+}
+
+.footnote {
+  margin: 2.5rem 0 0;
+  max-width: 40rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+code {
+  font-size: 0.9em;
 }
