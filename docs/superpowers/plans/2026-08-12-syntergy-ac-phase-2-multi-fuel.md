@@ -56,13 +56,13 @@ Phase 2 **MUST NOT** edit until merge coordination:
 
 All of the following exist and tests pass:
 
-- [ ] Vite + React app boots
-- [ ] `Powertrain` / `Vehicle` / `VehicleVersion` types exist with `type: 'BEV' | 'HEV' | 'PHEV' | 'ICE'`
-- [ ] `calcTrip` (or equivalent) is a **pure function** with Vitest coverage for BEV one-way + round-trip
-- [ ] BEV catalog module is the single source of vehicle data
+- [x] Vite + React app boots
+- [x] `Powertrain` / `Vehicle` / `VehicleVersion` types exist with `type: 'BEV' | 'HEV' | 'PHEV' | 'ICE'`
+- [x] `calcTrip` (or equivalent) is a **pure function** with Vitest coverage for BEV one-way + round-trip
+- [x] BEV catalog module is the single source of vehicle data
 
 **Status placeholder for handoff:**  
-`GATE A: [ ] NOT READY  /  [ ] READY (commit/SHA: ________)`
+`GATE A: READY (commit/SHA: af2413af14f66c89577041606f853db541b6380c on feat/gate-a-core)`
 
 ### GATE B (safe to wire multi-fuel UI)
 
@@ -230,11 +230,11 @@ Project: Syntergy AC (/Users/antonio/syntergy-ac)
 Phase 1 design: docs/superpowers/specs/2026-08-12-syntergy-ac-design.md
 Phase 2 plan: docs/superpowers/plans/2026-08-12-syntergy-ac-phase-2-multi-fuel.md
 
-GATE A commit: <SHA>
-GATE B commit: <SHA or n/a>
+GATE A commit: af2413af14f66c89577041606f853db541b6380c
+GATE B commit: n/a
 
-Phase 1 still in progress: <what remains>
-Branch to base on: <branch>
+Phase 1 still in progress: RouteManager / presets+custom routes, Google Distance Matrix (optional key), Settings API key UI, TripControls (ida/redondo + drive style + $/kWh), 3-slot VehicleSlot + ResultCard comparison UI (GATE B+)
+Branch to base on: feat/gate-a-core (or master after PR merge)
 Instruction: Implement Phase 2 per plan; do not touch Google/routes/settings; keep calc pure + tests.
 Display name is Syntergy AC only (never "Autonomy Compare" in UI titles).
 ```
