@@ -7,8 +7,8 @@ import {
   type SlotSelection,
 } from './components/VehicleSlot'
 import { presetRoutes } from './data/routes'
-import { getAllVehicles } from './data/vehicles'
-import { DEFAULT_PRICE_PER_KWH } from './lib/constants'
+import { getAllMultiFuelVehicles } from './data/vehicles-multifuel'
+import { DEFAULT_PRICE_PER_KWH, DEFAULT_PRICE_PER_LITER } from './lib/constants'
 import { loadCustomRoutes } from './lib/storage'
 import type { DriveStyle, Route, TripMode } from './types'
 import './App.css'
@@ -16,7 +16,7 @@ import './App.css'
 const EMPTY_SLOT: SlotSelection = { vehicleId: '', versionId: '' }
 
 function App() {
-  const vehicles = getAllVehicles()
+  const vehicles = getAllMultiFuelVehicles()
   const [customRoutes, setCustomRoutes] = useState<Route[]>(() =>
     loadCustomRoutes(),
   )
@@ -27,6 +27,7 @@ function App() {
   const [mode, setMode] = useState<TripMode>('oneWay')
   const [driveStyle, setDriveStyle] = useState<DriveStyle>('normal')
   const [pricePerKWh, setPricePerKWh] = useState(DEFAULT_PRICE_PER_KWH)
+  const [pricePerLiter, setPricePerLiter] = useState(DEFAULT_PRICE_PER_LITER)
   const [slots, setSlots] = useState<SlotSelection[]>([
     EMPTY_SLOT,
     EMPTY_SLOT,
@@ -87,6 +88,8 @@ function App() {
         onDriveStyleChange={setDriveStyle}
         pricePerKWh={pricePerKWh}
         onPriceChange={setPricePerKWh}
+        pricePerLiter={pricePerLiter}
+        onPricePerLiterChange={setPricePerLiter}
         apiKeyEpoch={apiKeyEpoch}
       />
 
@@ -108,6 +111,7 @@ function App() {
             mode={mode}
             driveStyle={driveStyle}
             pricePerKWh={pricePerKWh}
+            pricePerLiter={pricePerLiter}
           />
         ))}
       </section>

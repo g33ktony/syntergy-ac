@@ -225,47 +225,55 @@ Use approximate public MX/latam specs; put sources as code comments.
       wiring lands; data is brand-grouped in each catalog file
 - [x] Commit
 
-### Task 6: UI metrics (after GATE B) — PARTIAL, by design
+### Task 6: UI metrics (after GATE B) — DONE
 - [x] New standalone components: `FuelResultCard.tsx`, `PhevResultCard.tsx`,
       `PowertrainBadge.tsx` (reuse Phase 1's existing `.result-card`/
-      `.metrics` CSS classes, no `App.css` edits)
-- [ ] **Not wired into `VehicleSlot`/`ResultCard`/`App.tsx`.** Those are
-      Phase 1-owned shared/live files (3-slot layout, model→version select,
-      trip controls). Wiring multi-fuel selection in requires Phase 1
-      decisions (does a slot pick powertrain first? do BEV-only fields like
-      connector/SoC get hidden per type?) that are merge-coordination calls,
-      not something to force through solo. Left explicitly open — see
-      "Left for merge coordination" below.
-- [ ] Commit — n/a, nothing to wire yet
+      `.metrics` CSS classes; only new CSS added is `.powertrain-badge`)
+- [x] Wired into `VehicleSlot`/`App.tsx` now that Phase 1's trip-UI PR
+      (`feat/phase-1-trip-ui`, merged via PR #2) landed on `master`:
+      - `App.tsx` now sources the catalog from
+        `getAllMultiFuelVehicles()` instead of the BEV-only
+        `getAllVehicles()`, and holds a `pricePerLiter` state (default
+        `DEFAULT_PRICE_PER_LITER` = 24 MXN) alongside `pricePerKWh`.
+      - `TripControls` gained a `$ / L gasolina (MXN)` input next to
+        `$ / kWh (MXN)`, wired the same way.
+      - `VehicleSlot` now types its catalog as `AnyVehicle[]`, dispatches
+        through `calcAnyTrip` per the selected vehicle's `type`, and picks
+        `ResultCard` / `FuelResultCard` / `PhevResultCard` accordingly. A
+        `PowertrainBadge` sits in the slot header so it's obvious what's
+        selected. Version-select labels adapt per type (battery+range for
+        BEV, tank+range for ICE/HEV, EV range for PHEV) instead of assuming
+        BEV fields.
+- [x] Hide BEV-only fields (connector, SoC) when not applicable; show
+      analogs — handled by rendering the type-specific card instead of one
+      shared `Metrics` component; each card only shows fields that exist
+      for that powertrain.
+- [x] Commit
 
-### Task 7: Merge readiness
-- [x] Rebase on Phase 1 — n/a, single local repo/branch (no separate
-      Phase 1 branch existed to rebase against; GATE A+B were already on
-      `master`)
-- [x] Resolve conflicts only in agreed files — n/a, no conflicts (only
-      touched `src/types.ts`, `src/lib/calc.ts` additively, plus new files)
+### Task 7: Merge readiness — DONE
+- [x] Rebase on Phase 1 — done: `git fetch && git rebase origin/master`
+      after PR #2 (`feat/phase-1-trip-ui`) merged; no conflicts, force-pushed
+      the rebased branch.
+- [x] Resolve conflicts only in agreed files — n/a, no conflicts occurred;
+      Task 6 wiring above touched `App.tsx`, `TripControls.tsx`,
+      `VehicleSlot.tsx`, `App.css` in addition to Phase 2's own files —
+      these were previously "must not touch without coordination" but are
+      now safe since Phase 1's PR is merged and this *is* the coordination
+      pass.
 - [x] Full Vitest + manual smoke — 14/14 tests pass, `tsc -b --noEmit`
-      clean, `oxlint` clean, `npm run build` succeeds
-- [ ] Manual smoke "1 BEV + 1 ICE + 1 PHEV side by side" in the running UI —
-      blocked on the Task 6 wiring above
+      clean, `oxlint` clean, `npm run build` succeeds.
+- [x] Manual smoke "1 BEV + 1 ICE + 1 PHEV side by side" in the running
+      UI (`npm run dev`, CDMX → Querétaro route, Redondo mode): BYD Dolphin
+      Mini (BEV), VW Virtus (ICE), Toyota RAV4 Prime (PHEV) all render
+      correct type-specific metrics simultaneously, badges show
+      "Eléctrico" / "Gasolina" / "Híbrido enchufable", ida/redondo
+      breakdown works for all three.
 - [x] Commit
 
 **GATE A: [x] READY (commit/SHA: `af2413a` / merged `b0266d6`)**
 **GATE B: [x] READY** (RouteManager, SettingsPanel, VehicleSlot model→version,
 ResultCard rendering, TripControls all present and working pre-Phase-2)
-
-### Left for merge coordination (Phase 1 + Phase 2)
-- Wiring `getAllMultiFuelVehicles()` / `calcAnyTrip()` into `VehicleSlot` so
-  a slot can select any powertrain, not just BEV.
-- Deciding whether `ResultCard` grows a `type`-based switch internally, or
-  `VehicleSlot` picks between `ResultCard`/`FuelResultCard`/`PhevResultCard`
-  externally.
-- A `pricePerLiter` input needs to be added to `TripControls`/`App.tsx`
-  state (currently only `pricePerKWh` is plumbed through); Phase 2's fuel
-  calculators accept it as a parameter but nothing in the UI sets it yet —
-  `DEFAULT_PRICE_PER_LITER` (24 MXN) is the only value exercised in tests.
-- Hiding BEV-only fields (connector, SoC) vs. fuel-only fields (tank %,
-  fuel type) per selected vehicle type in whatever slot UI results.
+**Phase 1 trip UI merged: PR #2, `feat/phase-1-trip-ui` → `master`**
 
 ---
 
