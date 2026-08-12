@@ -62,7 +62,7 @@ All of the following exist and tests pass:
 - [ ] BEV catalog module is the single source of vehicle data
 
 **Status placeholder for handoff:**  
-`GATE A: [ ] NOT READY  /  [ ] READY (commit/SHA: ________)`
+`GATE A: READY (branch: feat/gate-a-core — SHA filled after push)`
 
 ### GATE B (safe to wire multi-fuel UI)
 

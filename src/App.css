@@ -1,0 +1,55 @@
+.app {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: clamp(2.25rem, 6vw, 3.25rem);
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.tagline {
+  margin: 0.5rem 0 0;
+  color: #4a5560;
+  max-width: 28rem;
+}
+
+.catalog {
+  margin-top: 2.5rem;
+}
+
+.catalog h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.vehicle-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.vehicle-list > li {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(26, 31, 36, 0.12);
+}
+
+.type {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: #5a6670;
+  text-transform: uppercase;
+}
+
+.versions {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  color: #333b42;
+  font-size: 0.95rem;
+}
