@@ -184,42 +184,88 @@ Use approximate public MX/latam specs; put sources as code comments.
 ## Tasks (bite-sized)
 
 ### Task 1: Confirm GATE A
-- [ ] Pull latest Phase 1 branch
-- [ ] Verify types + `calcTrip` BEV tests pass
-- [ ] Fill GATE A status + commit SHA at top of this file (or PR description)
-- [ ] If not ready: STOP
+- [x] Pull latest Phase 1 branch
+- [x] Verify types + `calcTrip` BEV tests pass
+- [x] Fill GATE A status + commit SHA at top of this file (or PR description) — see below
+- [x] If not ready: STOP — n/a, GATE A **and** GATE B were already merged locally
+      (recovered dangling commits `af2413a`/`0fff868`/`b0266d6`; Phase 1's
+      uncommitted GATE B work — RouteManager, SettingsPanel, google.ts,
+      storage.ts, VehicleSlot, ResultCard, TripControls — was checkpointed
+      as-is in commit `afe9758` before any Phase 2 edits, unmodified.)
 
 ### Task 2: Split or extend vehicle types
-- [ ] Add ICE/HEV/PHEV version shapes as discriminated union
-- [ ] Export `getAllVehicles()` aggregating modules
-- [ ] Commit
+- [x] Add ICE/HEV/PHEV version shapes as discriminated union
+      (`BevVehicle | IceVehicle | HevVehicle | PhevVehicle` in `src/types.ts`,
+      additive only — Phase 1's `Vehicle`/`VehicleVersion` unchanged)
+- [x] Export `getAllVehicles()` aggregating modules — added
+      `getAllMultiFuelVehicles()` in `src/data/vehicles-multifuel.ts` as a
+      **separate** function from Phase 1's BEV-only `getAllVehicles()`, so
+      the live 3-slot UI's return shape doesn't change out from under it
+- [x] Commit
 
 ### Task 3: ICE/HEV calc + tests
-- [ ] Write failing tests for one-way and round-trip fuel used/cost
-- [ ] Implement `calcFuelTrip`
-- [ ] Wire `calcTrip` switch on `type`
-- [ ] Commit
+- [x] Write failing tests for one-way and round-trip fuel used/cost
+      (`src/lib/calc-fuel.test.ts`, written before the implementation)
+- [x] Implement `calcFuelTrip` (`src/lib/calc-fuel.ts`)
+- [x] Wire `calcTrip` switch on `type` — added `calcAnyTrip()` dispatcher in
+      `src/lib/calc.ts` rather than overloading `calcTrip` itself, so
+      Phase 1's BEV-only call site (`VehicleSlot`) keeps its exact signature
+- [x] Commit
 
 ### Task 4: PHEV calc + tests
-- [ ] Failing tests for blended energy (EV then fuel)
-- [ ] Implement conservative no-recharge round-trip
-- [ ] Commit
+- [x] Failing tests for blended energy (EV then fuel) (`calc-phev.test.ts`)
+- [x] Implement conservative no-recharge round-trip (`calc-phev.ts`)
+- [x] Commit
 
 ### Task 5: Seed catalogs
-- [ ] Add ≥3 ICE, ≥3 HEV, ≥3 PHEV entries with versions
-- [ ] Ensure selector lists group by type or brand
-- [ ] Commit
+- [x] Add ≥3 ICE, ≥3 HEV, ≥3 PHEV entries with versions
+      (5 ICE / 3 HEV / 3 PHEV models, most with 2 versions — see
+      `src/data/vehicles-{ice,hev,phev}.ts`)
+- [x] Ensure selector lists group by type or brand — n/a until Task 6 UI
+      wiring lands; data is brand-grouped in each catalog file
+- [x] Commit
 
-### Task 6: UI metrics (after GATE B)
-- [ ] Extend or compose `ResultCard` to show liters / $/L / electric+fuel for PHEV
-- [ ] Hide BEV-only fields (connector, SoC) when not applicable; show analogs
-- [ ] Commit
+### Task 6: UI metrics (after GATE B) — PARTIAL, by design
+- [x] New standalone components: `FuelResultCard.tsx`, `PhevResultCard.tsx`,
+      `PowertrainBadge.tsx` (reuse Phase 1's existing `.result-card`/
+      `.metrics` CSS classes, no `App.css` edits)
+- [ ] **Not wired into `VehicleSlot`/`ResultCard`/`App.tsx`.** Those are
+      Phase 1-owned shared/live files (3-slot layout, model→version select,
+      trip controls). Wiring multi-fuel selection in requires Phase 1
+      decisions (does a slot pick powertrain first? do BEV-only fields like
+      connector/SoC get hidden per type?) that are merge-coordination calls,
+      not something to force through solo. Left explicitly open — see
+      "Left for merge coordination" below.
+- [ ] Commit — n/a, nothing to wire yet
 
 ### Task 7: Merge readiness
-- [ ] Rebase on Phase 1
-- [ ] Resolve conflicts only in agreed files
-- [ ] Full Vitest + manual smoke (1 BEV + 1 ICE + 1 PHEV side by side)
-- [ ] Commit
+- [x] Rebase on Phase 1 — n/a, single local repo/branch (no separate
+      Phase 1 branch existed to rebase against; GATE A+B were already on
+      `master`)
+- [x] Resolve conflicts only in agreed files — n/a, no conflicts (only
+      touched `src/types.ts`, `src/lib/calc.ts` additively, plus new files)
+- [x] Full Vitest + manual smoke — 14/14 tests pass, `tsc -b --noEmit`
+      clean, `oxlint` clean, `npm run build` succeeds
+- [ ] Manual smoke "1 BEV + 1 ICE + 1 PHEV side by side" in the running UI —
+      blocked on the Task 6 wiring above
+- [x] Commit
+
+**GATE A: [x] READY (commit/SHA: `af2413a` / merged `b0266d6`)**
+**GATE B: [x] READY** (RouteManager, SettingsPanel, VehicleSlot model→version,
+ResultCard rendering, TripControls all present and working pre-Phase-2)
+
+### Left for merge coordination (Phase 1 + Phase 2)
+- Wiring `getAllMultiFuelVehicles()` / `calcAnyTrip()` into `VehicleSlot` so
+  a slot can select any powertrain, not just BEV.
+- Deciding whether `ResultCard` grows a `type`-based switch internally, or
+  `VehicleSlot` picks between `ResultCard`/`FuelResultCard`/`PhevResultCard`
+  externally.
+- A `pricePerLiter` input needs to be added to `TripControls`/`App.tsx`
+  state (currently only `pricePerKWh` is plumbed through); Phase 2's fuel
+  calculators accept it as a parameter but nothing in the UI sets it yet —
+  `DEFAULT_PRICE_PER_LITER` (24 MXN) is the only value exercised in tests.
+- Hiding BEV-only fields (connector, SoC) vs. fuel-only fields (tank %,
+  fuel type) per selected vehicle type in whatever slot UI results.
 
 ---
 
