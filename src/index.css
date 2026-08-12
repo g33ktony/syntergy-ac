@@ -1,10 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap');
+
 :root {
   color: #1a1f24;
   background:
     radial-gradient(1200px 600px at 10% -10%, #d8e8f2 0%, transparent 55%),
     radial-gradient(900px 500px at 100% 0%, #e8f0e6 0%, transparent 50%),
     linear-gradient(180deg, #f3f6f8 0%, #e9eef2 100%);
-  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
