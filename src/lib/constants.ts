@@ -19,3 +19,21 @@ export const DEFAULT_HIGHWAY_KMH = 90
 
 /** Default electricity price (MXN / kWh). */
 export const DEFAULT_PRICE_PER_KWH = 2.0
+
+// ---------------------------------------------------------------------------
+// Phase 2 — ICE / HEV / PHEV tunables (see design §12, plan §"Calculation
+// rules"). Additive; does not change any Phase 1 constant above.
+// ---------------------------------------------------------------------------
+
+/** Default gasoline price (MXN / liter), regular/"Magna"-ish national avg. */
+export const DEFAULT_PRICE_PER_LITER = 24.0
+
+/**
+ * Stop if the trip exceeds this fraction of effective (realism-adjusted)
+ * range — mirrors the BEV reserve concept but expressed as a range fraction
+ * since liquid-fuel tanks don't have a fixed "reserve %" the way SoC does.
+ */
+export const FUEL_RANGE_SAFETY_FACTOR = 0.85
+
+/** Same MX highway realism discount applied to BEV consumption (design §6.1). */
+export const FUEL_MX_FACTOR = MX_FACTOR

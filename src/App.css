@@ -291,6 +291,18 @@
   font-size: 0.9rem;
 }
 
+.powertrain-badge {
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
 .result-card {
   display: grid;
   gap: 1rem;

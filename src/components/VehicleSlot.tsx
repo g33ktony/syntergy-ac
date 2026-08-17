@@ -1,12 +1,18 @@
-import { calcTrip } from '../lib/calc'
+import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
 import { RESERVE_PERCENT } from '../lib/constants'
+import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
 import type {
+  AnyVehicle,
+  AnyVersion,
   DriveStyle,
+  FuelType,
   Route,
   TripMode,
-  Vehicle,
-  VehicleVersion,
+  UnitSystem,
 } from '../types'
+import { FuelResultCard } from './FuelResultCard'
+import { PhevResultCard } from './PhevResultCard'
+import { PowertrainBadge } from './PowertrainBadge'
 import { ResultCard } from './ResultCard'
 
 export type SlotSelection = {
@@ -16,13 +22,109 @@ export type SlotSelection = {
 
 type VehicleSlotProps = {
   slotIndex: number
-  vehicles: Vehicle[]
+  vehicles: AnyVehicle[]
   selection: SlotSelection
   onChange: (next: SlotSelection) => void
   route: Route | null
   mode: TripMode
   driveStyle: DriveStyle
   pricePerKWh: number
+  pricePerLiter: number
+  unitSystem: UnitSystem
+}
+
+/** `AnyVersion`'s variants aren't tagged; distinguish by their unique fields. */
+function versionSubtitle(version: AnyVersion): string {
+  if ('electricRangeKmOfficial' in version) {
+    return `${version.name} · ${version.electricRangeKmOfficial} km eléctricos`
+  }
+  if ('consumptionKWhPer100' in version) {
+    return `${version.name} · ${version.batteryKWh} kWh · ${version.rangeKmOfficial} km`
+  }
+  return `${version.name} · ${version.tankLiters} L · ${version.rangeKmOfficial} km`
+}
+
+function calcResultForVehicle(
+  vehicle: AnyVehicle,
+  versionId: string,
+  route: Route,
+  mode: TripMode,
+  driveStyle: DriveStyle,
+  pricePerKWh: number,
+  pricePerLiter: number,
+): AnyTripResult | null {
+  switch (vehicle.type) {
+    case 'BEV': {
+      const version = vehicle.versions.find((v) => v.id === versionId)
+      if (!version) return null
+      return calcAnyTrip({
+        vehicleType: 'BEV',
+        distanceKm: route.distanceKm,
+        version,
+        driveStyle,
+        pricePerKWh,
+        reservePercent: RESERVE_PERCENT,
+        mode,
+        driveHoursOneWay: route.driveHoursOneWay,
+      })
+    }
+    case 'ICE':
+    case 'HEV': {
+      const version = vehicle.versions.find((v) => v.id === versionId)
+      if (!version) return null
+      return calcAnyTrip({
+        vehicleType: vehicle.type,
+        distanceKm: route.distanceKm,
+        version,
+        driveStyle,
+        pricePerLiter,
+        mode,
+        driveHoursOneWay: route.driveHoursOneWay,
+      })
+    }
+    case 'PHEV': {
+      const version = vehicle.versions.find((v) => v.id === versionId)
+      if (!version) return null
+      return calcAnyTrip({
+        vehicleType: 'PHEV',
+        distanceKm: route.distanceKm,
+        version,
+        driveStyle,
+        pricePerKWh,
+        pricePerLiter,
+        mode,
+        driveHoursOneWay: route.driveHoursOneWay,
+      })
+    }
+  }
+}
+
+function versionFuel(version: AnyVersion | null): FuelType | undefined {
+  return version && 'fuel' in version ? version.fuel : undefined
+}
+
+function vehiclesByPowertrain(vehicles: AnyVehicle[]) {
+  return POWERTRAIN_GROUP_ORDER.map((type) => ({
+    type,
+    label: POWERTRAIN_GROUP_LABELS[type],
+    items: vehicles.filter((vehicle) => vehicle.type === type),
+  })).filter((group) => group.items.length > 0)
+}
+
+function renderResultCard(result: AnyTripResult, mode: TripMode, unitSystem: UnitSystem) {
+  switch (result.vehicleType) {
+    case 'BEV':
+      return <ResultCard result={result} mode={mode} unitSystem={unitSystem} />
+    case 'ICE':
+    case 'HEV':
+      return (
+        <FuelResultCard result={result} mode={mode} unitSystem={unitSystem} />
+      )
+    case 'PHEV':
+      return (
+        <PhevResultCard result={result} mode={mode} unitSystem={unitSystem} />
+      )
+  }
 }
 
 export function VehicleSlot({
@@ -34,29 +136,34 @@ export function VehicleSlot({
   mode,
   driveStyle,
   pricePerKWh,
+  pricePerLiter,
+  unitSystem,
 }: VehicleSlotProps) {
-  const vehicle =
+  const vehicle: AnyVehicle | null =
     vehicles.find((v) => v.id === selection.vehicleId) ?? null
-  const version: VehicleVersion | null =
+  const version: AnyVersion | null =
     vehicle?.versions.find((v) => v.id === selection.versionId) ?? null
 
   const result =
-    route && version
-      ? calcTrip({
-          distanceKm: route.distanceKm,
-          version,
+    route && vehicle && version
+      ? calcResultForVehicle(
+          vehicle,
+          selection.versionId,
+          route,
+          mode,
           driveStyle,
           pricePerKWh,
-          reservePercent: RESERVE_PERCENT,
-          mode,
-          driveHoursOneWay: route.driveHoursOneWay,
-        })
+          pricePerLiter,
+        )
       : null
 
   return (
     <section className="vehicle-slot" aria-label={`Vehículo ${slotIndex + 1}`}>
       <header className="slot-header">
         <span className="slot-index">Vehículo {slotIndex + 1}</span>
+        {vehicle ? (
+          <PowertrainBadge type={vehicle.type} fuel={versionFuel(version)} />
+        ) : null}
       </header>
 
       <label className="field">
@@ -72,10 +179,14 @@ export function VehicleSlot({
           }}
         >
           <option value="">Elegir modelo…</option>
-          {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.brand} {v.model}
-            </option>
+          {vehiclesByPowertrain(vehicles).map((group) => (
+            <optgroup key={group.type} label={group.label}>
+              {group.items.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.brand} {v.model}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </label>
@@ -97,7 +208,7 @@ export function VehicleSlot({
           </option>
           {vehicle?.versions.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.name} · {v.batteryKWh} kWh · {v.rangeKmOfficial} km
+              {versionSubtitle(v)}
             </option>
           ))}
         </select>
@@ -105,10 +216,10 @@ export function VehicleSlot({
 
       {!route ? (
         <p className="slot-hint">Selecciona una ruta para ver resultados.</p>
-      ) : !version ? (
+      ) : !vehicle || !version ? (
         <p className="slot-hint">Elige modelo y versión.</p>
       ) : result ? (
-        <ResultCard result={result} mode={mode} />
+        renderResultCard(result, mode, unitSystem)
       ) : null}
     </section>
   )

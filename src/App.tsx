@@ -7,16 +7,16 @@ import {
   type SlotSelection,
 } from './components/VehicleSlot'
 import { presetRoutes } from './data/routes'
-import { getAllVehicles } from './data/vehicles'
-import { DEFAULT_PRICE_PER_KWH } from './lib/constants'
-import { loadCustomRoutes } from './lib/storage'
-import type { DriveStyle, Route, TripMode } from './types'
+import { getAllMultiFuelVehicles } from './data/vehicles-multifuel'
+import { DEFAULT_PRICE_PER_KWH, DEFAULT_PRICE_PER_LITER } from './lib/constants'
+import { loadCustomRoutes, loadUnitSystem } from './lib/storage'
+import type { DriveStyle, Route, TripMode, UnitSystem } from './types'
 import './App.css'
 
 const EMPTY_SLOT: SlotSelection = { vehicleId: '', versionId: '' }
 
 function App() {
-  const vehicles = getAllVehicles()
+  const vehicles = getAllMultiFuelVehicles()
   const [customRoutes, setCustomRoutes] = useState<Route[]>(() =>
     loadCustomRoutes(),
   )
@@ -27,12 +27,16 @@ function App() {
   const [mode, setMode] = useState<TripMode>('oneWay')
   const [driveStyle, setDriveStyle] = useState<DriveStyle>('normal')
   const [pricePerKWh, setPricePerKWh] = useState(DEFAULT_PRICE_PER_KWH)
+  const [pricePerLiter, setPricePerLiter] = useState(DEFAULT_PRICE_PER_LITER)
   const [slots, setSlots] = useState<SlotSelection[]>([
     EMPTY_SLOT,
     EMPTY_SLOT,
     EMPTY_SLOT,
   ])
   const [apiKeyEpoch, setApiKeyEpoch] = useState(0)
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(() =>
+    loadUnitSystem(),
+  )
 
   const allRoutes = useMemo(
     () => [...presetRoutes, ...customRoutes, ...googleRoutes],
@@ -70,10 +74,14 @@ function App() {
       <header className="app-header">
         <h1>Syntergy AC</h1>
         <p className="tagline">
-          Compara autonomía y costo de viaje entre vehículos eléctricos en
-          México.
+          Compara autonomía y costo de viaje entre eléctricos, híbridos y
+          gasolina en México.
         </p>
-        <SettingsPanel onApiKeyChange={() => setApiKeyEpoch((n) => n + 1)} />
+        <SettingsPanel
+          onApiKeyChange={() => setApiKeyEpoch((n) => n + 1)}
+          unitSystem={unitSystem}
+          onUnitSystemChange={setUnitSystem}
+        />
       </header>
 
       <TripControls
@@ -87,6 +95,8 @@ function App() {
         onDriveStyleChange={setDriveStyle}
         pricePerKWh={pricePerKWh}
         onPriceChange={setPricePerKWh}
+        pricePerLiter={pricePerLiter}
+        onPricePerLiterChange={setPricePerLiter}
         apiKeyEpoch={apiKeyEpoch}
       />
 
@@ -108,14 +118,17 @@ function App() {
             mode={mode}
             driveStyle={driveStyle}
             pricePerKWh={pricePerKWh}
+            pricePerLiter={pricePerLiter}
+            unitSystem={unitSystem}
           />
         ))}
       </section>
 
       <p className="footnote">
         El consumo oficial (NEDC/CLTC) no es carretera real. Usamos un factor
-        MX y el estilo de manejo para aproximar. Las paradas de carga son
-        estimaciones por distancia, no red VEMO/Evergo.
+        MX y el estilo de manejo para aproximar. Las paradas de carga y de
+        reabastecimiento son estimaciones por distancia y tanque, no red
+        VEMO/Evergo ni estaciones.
       </p>
     </main>
   )

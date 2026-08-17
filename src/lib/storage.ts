@@ -1,7 +1,8 @@
-import type { Route } from '../types'
+import type { Route, UnitSystem } from '../types'
 
 const CUSTOM_ROUTES_KEY = 'syntergy-ac:custom-routes'
 const API_KEY_KEY = 'syntergy-ac:google-api-key'
+const UNIT_SYSTEM_KEY = 'syntergy-ac:unit-system'
 
 function canUseStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -72,6 +73,17 @@ export function saveStoredApiKey(key: string): void {
 export function clearStoredApiKey(): void {
   if (!canUseStorage()) return
   localStorage.removeItem(API_KEY_KEY)
+}
+
+export function loadUnitSystem(): UnitSystem {
+  if (!canUseStorage()) return 'metric'
+  const value = localStorage.getItem(UNIT_SYSTEM_KEY)
+  return value === 'imperial' ? 'imperial' : 'metric'
+}
+
+export function saveUnitSystem(unitSystem: UnitSystem): void {
+  if (!canUseStorage()) return
+  localStorage.setItem(UNIT_SYSTEM_KEY, unitSystem)
 }
 
 function isRoute(value: unknown): value is Route {

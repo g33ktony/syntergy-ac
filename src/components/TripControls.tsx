@@ -21,6 +21,8 @@ type TripControlsProps = {
   onDriveStyleChange: (style: DriveStyle) => void
   pricePerKWh: number
   onPriceChange: (price: number) => void
+  pricePerLiter: number
+  onPricePerLiterChange: (price: number) => void
   apiKeyEpoch: number
 }
 
@@ -35,6 +37,8 @@ export function TripControls({
   onDriveStyleChange,
   pricePerKWh,
   onPriceChange,
+  pricePerLiter,
+  onPricePerLiterChange,
   apiKeyEpoch,
 }: TripControlsProps) {
   void apiKeyEpoch
@@ -156,6 +160,20 @@ export function TripControls({
             onChange={(e) => {
               const n = Number(e.target.value)
               if (Number.isFinite(n) && n >= 0) onPriceChange(n)
+            }}
+          />
+        </label>
+
+        <label className="field">
+          <span>$ / L gasolina (MXN)</span>
+          <input
+            type="number"
+            min={0}
+            step={0.1}
+            value={pricePerLiter}
+            onChange={(e) => {
+              const n = Number(e.target.value)
+              if (Number.isFinite(n) && n >= 0) onPricePerLiterChange(n)
             }}
           />
         </label>

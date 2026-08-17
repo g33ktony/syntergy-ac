@@ -4,7 +4,19 @@ import {
   KM_PER_CHARGE_STOP,
   MX_FACTOR,
 } from './constants'
-import type { TripInput, TripResult, TripResultBase } from '../types'
+import type {
+  AnyVehicle,
+  ComparisonRow,
+  FuelTripInput,
+  FuelTripResult,
+  PhevTripInput,
+  PhevTripResult,
+  TripInput,
+  TripResult,
+  TripResultBase,
+} from '../types'
+import { calcFuelTrip } from './calc-fuel'
+import { calcPhevTrip } from './calc-phev'
 
 function driveHoursForDistance(
   distanceKm: number,
@@ -73,5 +85,72 @@ export function calcTrip(input: TripInput): TripResult {
     ),
     connector: input.version.connector,
     oneWay,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — multi-fuel dispatch (plan Task 3/4: "wire calcTrip switch on
+// type"). Kept as a separate exported function rather than overloading
+// `calcTrip` above, so Phase 1's BEV-only call sites (VehicleSlot) keep
+// their existing signature untouched.
+// ---------------------------------------------------------------------------
+
+export type AnyTripInput =
+  | ({ vehicleType: 'BEV' } & TripInput)
+  | ({ vehicleType: 'ICE' | 'HEV' } & FuelTripInput)
+  | ({ vehicleType: 'PHEV' } & PhevTripInput)
+
+export type AnyTripResult =
+  | ({ vehicleType: 'BEV' } & TripResult)
+  | ({ vehicleType: 'ICE' | 'HEV' } & FuelTripResult)
+  | ({ vehicleType: 'PHEV' } & PhevTripResult)
+
+/** Single entry point that dispatches to the right pure calculator by powertrain. */
+export function calcAnyTrip(input: AnyTripInput): AnyTripResult {
+  switch (input.vehicleType) {
+    case 'BEV':
+      return { vehicleType: 'BEV', ...calcTrip(input) }
+    case 'ICE':
+    case 'HEV':
+      return { vehicleType: input.vehicleType, ...calcFuelTrip(input) }
+    case 'PHEV':
+      return { vehicleType: 'PHEV', ...calcPhevTrip(input) }
+  }
+}
+
+function feasibilityReason(
+  type: AnyVehicle['type'],
+  feasible: boolean,
+): string {
+  if (feasible) return 'Alcanza sin parada adicional'
+  return type === 'BEV'
+    ? 'Requiere carga antes de llegar'
+    : 'Requiere reabastecer antes de llegar'
+}
+
+function isFeasibleWithoutStop(result: AnyTripResult): boolean {
+  return result.vehicleType === 'BEV'
+    ? result.reachesWithReserve
+    : result.reachesWithoutStop
+}
+
+/** Reduces any powertrain's trip result to the shared comparison row shape. */
+export function toComparisonRow(
+  vehicleId: string,
+  versionId: string,
+  type: AnyVehicle['type'],
+  result: AnyTripResult,
+): ComparisonRow {
+  const feasible = isFeasibleWithoutStop(result)
+
+  return {
+    vehicleId,
+    versionId,
+    type,
+    totalCostMxn: result.costMxn,
+    costPerKm: result.distanceKm > 0 ? result.costMxn / result.distanceKm : 0,
+    feasibleWithoutStop: feasible,
+    feasibilityReason: feasibilityReason(type, feasible),
+    driveHours: result.driveHours,
   }
 }
