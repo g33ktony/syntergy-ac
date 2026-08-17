@@ -14,9 +14,6 @@ const DRIVE_STYLE_OPTIONS: { value: DriveStyle; label: string }[] = [
 ]
 
 type TripControlsProps = {
-  routes: Route[]
-  selectedRouteId: string
-  onSelectRouteId: (id: string) => void
   mode: TripMode
   onModeChange: (mode: TripMode) => void
   driveStyle: DriveStyle
@@ -40,9 +37,6 @@ function sourceSuffix(source: Route['source']): string {
 }
 
 export function TripControls({
-  routes,
-  selectedRouteId,
-  onSelectRouteId,
   mode,
   onModeChange,
   driveStyle,
@@ -62,21 +56,14 @@ export function TripControls({
       <h2 id="trip-controls-heading">Viaje</h2>
 
       <div className="controls-grid">
-        <label className="field field-wide">
+        <div className="field field-wide">
           <span>Ruta</span>
-          <select
-            value={selectedRouteId}
-            onChange={(e) => onSelectRouteId(e.target.value)}
-          >
-            <option value="">Elegir ruta…</option>
-            {routes.map((route) => (
-              <option key={route.id} value={route.id}>
-                {routeLabel(route)}
-                {sourceSuffix(route.source)}
-              </option>
-            ))}
-          </select>
-        </label>
+          <p className="route-summary" aria-live="polite" aria-disabled="true">
+            {selectedRoute
+              ? `${routeLabel(selectedRoute)}${sourceSuffix(selectedRoute.source)}`
+              : 'Elige origen y destino arriba para ver la ruta.'}
+          </p>
+        </div>
 
         <fieldset className="mode-toggle">
           <legend>Tipo de viaje</legend>

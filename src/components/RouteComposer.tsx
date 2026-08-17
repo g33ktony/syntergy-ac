@@ -7,7 +7,7 @@ import { reverseGeocode } from '../lib/google'
 import { getGoogleApiKey } from '../lib/config'
 import { formatMxn } from '../lib/format'
 import { applyTollOverride } from '../lib/tolls'
-import { routeLabel } from '../data/routes'
+import { presetRoutes, routeLabel } from '../data/routes'
 import type { LatLng, Route, RouteSourcePreference, TripMode } from '../types'
 import { MapView } from './MapView'
 import { PlaceField } from './PlaceField'
@@ -16,6 +16,7 @@ type RouteComposerProps = {
   customRoutes: Route[]
   onCustomRoutesChange: (routes: Route[]) => void
   onRouteCreated?: (route: Route) => void
+  onSelectPreset?: (route: Route) => void
   onLookedUpRoute: (route: Route) => void
   mode: TripMode
   routeSourcePreference: RouteSourcePreference
@@ -28,6 +29,7 @@ export function RouteComposer({
   customRoutes,
   onCustomRoutesChange,
   onRouteCreated,
+  onSelectPreset,
   onLookedUpRoute,
   mode,
   routeSourcePreference,
@@ -141,12 +143,30 @@ export function RouteComposer({
 
   return (
     <section className="route-manager" aria-labelledby="route-manager-heading">
-      <h2 id="route-manager-heading">Agregar ruta</h2>
+      <h2 id="route-manager-heading">Ruta</h2>
       <p className="section-lead">
-        Elige origen y destino. Los km, elevación, casetas y cargadores salen
-        del mapa
+        Primero elige origen y destino. Los km, elevación, casetas y cargadores
+        salen del mapa
         {useGoogle ? ' (Google).' : ' (OSM/OSRM público; puede ser inestable).'}
       </p>
+
+      <div className="preset-chips" aria-label="Rutas frecuentes">
+        <span>Rutas frecuentes</span>
+        {presetRoutes.map((route) => (
+          <button
+            key={route.id}
+            type="button"
+            className="preset-chip"
+            onClick={() => {
+              setFrom(route.from)
+              setTo(route.to)
+              onSelectPreset?.(route)
+            }}
+          >
+            {routeLabel(route)}
+          </button>
+        ))}
+      </div>
 
       {!useGoogle ? (
         <p className="form-hint" role="status">

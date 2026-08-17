@@ -300,6 +300,51 @@
   align-items: end;
 }
 
+.route-form .place-field {
+  z-index: 1;
+}
+
+.route-form .place-field:focus-within {
+  z-index: 5;
+}
+
+.route-summary {
+  margin: 0;
+  padding: 0.4rem 0.1rem;
+  min-height: 1.35rem;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  pointer-events: none;
+}
+
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 1.1rem;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.preset-chip {
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  padding: 0.25rem 0.45rem;
+  cursor: pointer;
+}
+
+.preset-chip:hover,
+.preset-chip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .google-form {
   margin-top: 1.75rem;
   padding-top: 1.5rem;
@@ -580,6 +625,7 @@
   margin: 0;
   padding: 0.25rem 0;
   position: absolute;
+  top: 100%;
   z-index: 4;
   background: var(--paper);
   border: 1px solid var(--line);
