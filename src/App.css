@@ -225,6 +225,8 @@
 
 .btn-primary,
 .btn-secondary {
+  position: relative;
+  isolation: isolate;
   font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 600;
@@ -232,6 +234,18 @@
   text-transform: uppercase;
   border-radius: 0;
   padding: 0.6rem 1rem;
+  border: 0;
+  background: transparent;
+}
+
+/* Punch the fill/border, not the button — clip-path would hide :focus-visible. */
+.btn-primary::before,
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   border: 1px solid var(--ink);
   clip-path: polygon(
     0 0,
@@ -244,13 +258,20 @@
 }
 
 .btn-primary {
-  background: var(--ink);
   color: var(--paper);
 }
 
+.btn-primary::before {
+  background: var(--ink);
+}
+
 .btn-secondary {
-  background: transparent;
   color: var(--ink);
+}
+
+.btn-primary:hover::before,
+.btn-secondary:hover::before {
+  opacity: 0.9;
 }
 
 .btn-text {
@@ -470,7 +491,7 @@
 
 .metrics dl > div {
   display: grid;
-  grid-template-columns: minmax(0, max-content) minmax(0.75rem, 1fr) max-content;
+  grid-template-columns: minmax(0, max-content) minmax(0.75rem, 1fr) minmax(0, 1fr);
   min-width: 0;
   column-gap: 0.5rem;
   align-items: baseline;
@@ -497,11 +518,13 @@
 
 .metrics dd {
   grid-column: 3;
+  min-width: 0;
   margin: 0;
   font-family: var(--font-mono);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 /* Cost row reads as the ticket total: the number the whole world raises. */

@@ -137,9 +137,10 @@ Sin esquinas redondeadas en ningún componente (`rounded: none` en todo el siste
 ## Components
 
 ### Buttons
-- **Shape:** rectángulo con esquinas cortadas vía `clip-path` (no radius)
+- **Shape:** rectángulo con esquinas cortadas vía `clip-path` en `::before` (no radius). El `clip-path` no va en el `<button>` — recortaría el `outline` de `:focus-visible`.
 - **Primary:** fondo tinta (`#1c1a16`), texto papel, mono, mayúsculas, tracking 0.04em
 - **Secondary:** transparente, borde y texto tinta
+- **Focus:** anillo global de 2px acento (`outline-offset: 2px`) alrededor del hit-target rectangular, visible porque el punch vive en el pseudo-elemento
 - **Text:** solo texto, acento rojo, subrayado punteado (nunca sólido — refuerza el lenguaje de línea punteada)
 
 ### Segmented controls (toggle ida/redondo, unidades, fuente de ruta)
@@ -160,6 +161,7 @@ Sin esquinas redondeadas en ningún componente (`rounded: none` en todo el siste
 
 ### Ticket line items (`.metrics dl`)
 - **Style:** grid de 3 columnas explícitas por fila (etiqueta / línea punteada de relleno / valor), nunca flexbox anidado con pseudo-elementos — ver nota de Layout sobre por qué
+- **Value column:** `minmax(0, 1fr)` — no `max-content`. Cadenas largas (`requiere parada de reabastecimiento`) deben envolver, no empujar el ticket
 - **Total row:** doble regla superior, tipografía a 1.5rem en acento rojo — la única fila que rompe la jerarquía de datos normal
 
 ## Do's and Don'ts
@@ -175,3 +177,5 @@ Sin esquinas redondeadas en ningún componente (`rounded: none` en todo el siste
 - **Don't** agregar esquinas redondeadas, sombras de glass, o gradientes decorativos — el mundo es papel plano con tinta, no un dashboard SaaS.
 - **Don't** introducir un segundo color de acento saturado — el rojo-ticket es la única nota de color no semántica del sistema (The One Ink Rule).
 - **Don't** usar `border-left`/`border-right` de color como acento decorativo en tarjetas o alertas — no pertenece a este lenguaje visual.
+- **Don't** aplicar `clip-path` al mismo elemento que necesita un anillo de foco — recorta `outline` y `box-shadow`.
+- **Don't** usar un track `max-content` para los valores de métrica: no puede encoger y desborda la tarjeta en móvil.

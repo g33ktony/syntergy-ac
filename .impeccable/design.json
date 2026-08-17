@@ -51,7 +51,7 @@
       "refersTo": "button-primary",
       "description": "Botón de acción principal (Guardar clave, Guardar ruta). Esquinas cortadas, no radius.",
       "html": "<button class=\"ds-btn-primary\">GUARDAR RUTA</button>",
-      "css": ".ds-btn-primary { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; background: #1c1a16; color: #fbf8f1; border: 1px solid #1c1a16; padding: 0.6rem 1rem; clip-path: polygon(0 0, calc(100% - 0.5rem) 0, 100% 0.5rem, 100% 100%, 0.5rem 100%, 0 calc(100% - 0.5rem)); cursor: pointer; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid #a93420; outline-offset: 2px; }"
+      "css": ".ds-btn-primary { position: relative; isolation: isolate; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; background: transparent; color: #fbf8f1; border: 0; padding: 0.6rem 1rem; cursor: pointer; } .ds-btn-primary::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: #1c1a16; border: 1px solid #1c1a16; clip-path: polygon(0 0, calc(100% - 0.5rem) 0, 100% 0.5rem, 100% 100%, 0.5rem 100%, 0 calc(100% - 0.5rem)); } .ds-btn-primary:hover::before { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid #a93420; outline-offset: 2px; }"
     },
     {
       "name": "Ticket Card",
