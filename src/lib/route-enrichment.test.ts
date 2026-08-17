@@ -103,4 +103,36 @@ describe('mergeRouteEnrichment', () => {
   it('throws when given no providers', () => {
     expect(() => mergeRouteEnrichment([])).toThrow()
   })
+
+  it('does not average polylines: Google geometry wins over ABRP numbers', () => {
+    const google: ProviderEnrichment = {
+      provider: 'google',
+      distanceKm: 210,
+      driveHoursOneWay: 2.1,
+      elevationGainM: 100,
+      elevationLossM: 80,
+      outbound: {
+        distanceKm: 210,
+        driveHours: 2.1,
+        path: [
+          { lat: 19.4, lng: -99.1 },
+          { lat: 20.6, lng: -100.4 },
+        ],
+      },
+    }
+    const abrp: ProviderEnrichment = {
+      provider: 'abrp',
+      distanceKm: 400,
+      elevationGainM: 900,
+      avgSpeedLimitKmh: 95,
+    }
+
+    const result = mergeRouteEnrichment([google, abrp])
+
+    expect(result.distanceKm).toBe(210)
+    expect(result.elevationGainM).toBe(100)
+    expect(result.outbound?.path).toHaveLength(2)
+    expect(result.avgSpeedLimitKmh).toBe(95)
+    expect(result.source).toBe('merged')
+  })
 })

@@ -156,4 +156,49 @@ describe('calcTrip BEV', () => {
     // than flat, even though the one-way leg alone would look cheaper.
     expect(downhillOneWay.energyKWh).toBeGreaterThan(flat.energyKWh)
   })
+
+  it('adds casetas to totalCostMxn without changing energy costMxn', () => {
+    const version = dolphinPlus()
+    const result = calcTrip({
+      distanceKm: 120,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'oneWay',
+      tollCostMxn: 320,
+    })
+    expect(result.costMxn).toBeCloseTo(19.2, 5)
+    expect(result.tollCostMxn).toBe(320)
+    expect(result.totalCostMxn).toBeCloseTo(339.2, 5)
+  })
+
+  it('uses a real inbound elevation profile when provided', () => {
+    const version = dolphinPlus()
+    const swapped = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+      elevationGainM: 400,
+      elevationLossM: 50,
+    })
+    const inbound = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+      elevationGainM: 400,
+      elevationLossM: 50,
+      returnElevationGainM: 10,
+      returnElevationLossM: 20,
+      returnDistanceKm: 110,
+    })
+    expect(inbound.distanceKm).toBe(210)
+    expect(inbound.energyKWh).not.toBeCloseTo(swapped.energyKWh, 5)
+  })
 })

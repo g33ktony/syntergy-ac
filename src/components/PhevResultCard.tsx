@@ -15,6 +15,8 @@ type PhevResultCardProps = {
   avgTravelSpeedKmh?: number
   elevationGainM?: number
   elevationLossM?: number
+  returnElevationGainM?: number
+  returnElevationLossM?: number
 }
 
 function roundTripLabel(rechargeAtDestination: boolean): string {
@@ -110,9 +112,21 @@ function Metrics({
           </dd>
         </div>
         <div className="metric-total">
-          <dt>Costo</dt>
+          <dt>{result.tollCostMxn > 0 ? 'Costo energía/combustible' : 'Costo'}</dt>
           <dd>{formatMxn(result.costMxn)}</dd>
         </div>
+        {result.tollCostMxn > 0 ? (
+          <>
+            <div>
+              <dt>Casetas</dt>
+              <dd>{formatMxn(result.tollCostMxn)}</dd>
+            </div>
+            <div className="metric-total">
+              <dt>Costo total</dt>
+              <dd>{formatMxn(result.totalCostMxn)}</dd>
+            </div>
+          </>
+        ) : null}
       </dl>
     </div>
   )

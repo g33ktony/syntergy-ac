@@ -3,6 +3,7 @@ import {
   DRIVE_STYLE_MULTIPLIERS,
   FUEL_MX_FACTOR,
 } from './constants'
+import { attachTripCosts } from './trip-costs'
 import { calcTankFeasibility } from './calc-tank'
 import { elevationEnergyDeltaKWh, elevationFuelDeltaLiters } from './elevation'
 import type { PhevTripInput, PhevTripResult, PhevTripResultBase } from '../types'
@@ -24,6 +25,8 @@ function withTankMetrics(
     | 'reachesWithoutStop'
     | 'fuelStopsEstimate'
     | 'rechargeAtDestination'
+    | 'tollCostMxn'
+    | 'totalCostMxn'
   >,
   tankLiters: number,
   rechargeAtDestination: boolean,
@@ -32,6 +35,8 @@ function withTankMetrics(
     ...base,
     ...calcTankFeasibility(base.litersUsed, tankLiters),
     rechargeAtDestination,
+    tollCostMxn: 0,
+    totalCostMxn: base.costMxn,
   }
 }
 
@@ -84,7 +89,8 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
     baseLiters + elevationFuelDeltaLiters(input.elevationGainM, fuelShare),
   )
 
-  return withTankMetrics(
+  return attachTripCosts(
+    withTankMetrics(
     {
       distanceKm,
       driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
@@ -98,6 +104,8 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
     },
     version.tankLiters,
     false,
+    ),
+    0,
   )
 }
 
@@ -115,10 +123,11 @@ function calcFuelOnlyLeg(
   // descended on the way there is climbed on the way back.
   const litersUsed = Math.max(
     0,
-    baseLiters + elevationFuelDeltaLiters(input.elevationLossM),
+    baseLiters + elevationFuelDeltaLiters(input.elevationGainM),
   )
 
-  return withTankMetrics(
+  return attachTripCosts(
+    withTankMetrics(
     {
       distanceKm,
       driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
@@ -132,6 +141,8 @@ function calcFuelOnlyLeg(
     },
     version.tankLiters,
     false,
+    ),
+    0,
   )
 }
 
@@ -144,37 +155,47 @@ function calcFuelOnlyLeg(
  * Fuel-stop feasibility uses total liters vs tank (same helper as ICE/HEV).
  */
 export function calcPhevTrip(input: PhevTripInput): PhevTripResult {
-  const oneWay = calcOneWay(input)
+  const oneWay = attachTripCosts(
+    calcOneWay(input),
+    input.mode === 'oneWay' ? input.tollCostMxn : 0,
+  )
 
   if (input.mode === 'oneWay') {
     return oneWay
   }
 
   const rechargeAtDestination = Boolean(input.rechargeAtDestination)
+  const returnDistance = input.returnDistanceKm ?? input.distanceKm
+  const returnGain = input.returnElevationGainM ?? input.elevationLossM
+  const returnLoss = input.returnElevationLossM ?? input.elevationGainM
+  const returnInput: PhevTripInput = {
+    ...input,
+    distanceKm: returnDistance,
+    driveHoursOneWay: input.returnDriveHoursOneWay ?? input.driveHoursOneWay,
+    elevationGainM: returnGain,
+    elevationLossM: returnLoss,
+  }
   const returnLeg = rechargeAtDestination
-    ? calcOneWay({
-        ...input,
-        driveHoursOneWay: input.driveHoursOneWay,
-        // Return leg reverses the outbound elevation profile.
-        elevationGainM: input.elevationLossM,
-        elevationLossM: input.elevationGainM,
-      })
-    : calcFuelOnlyLeg(input, input.driveHoursOneWay)
+    ? calcOneWay(returnInput)
+    : calcFuelOnlyLeg(returnInput, returnInput.driveHoursOneWay)
 
   const litersUsed = oneWay.litersUsed + returnLeg.litersUsed
 
-  return {
-    distanceKm: oneWay.distanceKm + returnLeg.distanceKm,
-    driveHours: oneWay.driveHours + returnLeg.driveHours,
-    electricKmUsed: oneWay.electricKmUsed + returnLeg.electricKmUsed,
-    fuelKmUsed: oneWay.fuelKmUsed + returnLeg.fuelKmUsed,
-    energyKWh: oneWay.energyKWh + returnLeg.energyKWh,
-    litersUsed,
-    costMxn: oneWay.costMxn + returnLeg.costMxn,
-    usedElectricOnly: oneWay.usedElectricOnly && returnLeg.usedElectricOnly,
-    fuel: oneWay.fuel,
-    rechargeAtDestination,
-    ...calcTankFeasibility(litersUsed, input.version.tankLiters),
-    oneWay,
-  }
+  return attachTripCosts(
+    {
+      distanceKm: oneWay.distanceKm + returnLeg.distanceKm,
+      driveHours: oneWay.driveHours + returnLeg.driveHours,
+      electricKmUsed: oneWay.electricKmUsed + returnLeg.electricKmUsed,
+      fuelKmUsed: oneWay.fuelKmUsed + returnLeg.fuelKmUsed,
+      energyKWh: oneWay.energyKWh + returnLeg.energyKWh,
+      litersUsed,
+      costMxn: oneWay.costMxn + returnLeg.costMxn,
+      usedElectricOnly: oneWay.usedElectricOnly && returnLeg.usedElectricOnly,
+      fuel: oneWay.fuel,
+      rechargeAtDestination,
+      ...calcTankFeasibility(litersUsed, input.version.tankLiters),
+      oneWay,
+    },
+    input.tollCostMxn,
+  )
 }

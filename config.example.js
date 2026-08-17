@@ -10,9 +10,13 @@
  * window.SYNTERGY_AC_CONFIG = {
  *   googleMapsApiKey: '',
  *   abrpApiKey: '',
+ *   openRouteServiceApiKey: '',
+ *   openChargeMapApiKey: '',
  * };
  */
 window.SYNTERGY_AC_CONFIG = {
   googleMapsApiKey: '',
   abrpApiKey: '',
+  openRouteServiceApiKey: '',
+  openChargeMapApiKey: '',
 };

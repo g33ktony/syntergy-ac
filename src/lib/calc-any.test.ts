@@ -48,8 +48,8 @@ describe('calcAnyTrip dispatcher', () => {
 
     const row = toComparisonRow('t', 'v', 'PHEV', result)
     expect(row.type).toBe('PHEV')
-    expect(row.totalCostMxn).toBe(result.costMxn)
-    expect(row.costPerKm).toBeCloseTo(result.costMxn / 50, 5)
+    expect(row.totalCostMxn).toBe(result.totalCostMxn)
+    expect(row.costPerKm).toBeCloseTo(result.totalCostMxn / 50, 5)
     expect(row.feasibleWithoutStop).toBe(true)
     expect(result.vehicleType).toBe('PHEV')
     if (result.vehicleType !== 'PHEV') return

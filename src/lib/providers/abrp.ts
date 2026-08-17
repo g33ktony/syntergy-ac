@@ -1,3 +1,4 @@
+import { placeRefToQuery } from '../place'
 import type { ProviderEnrichment } from '../route-enrichment'
 import type { RouteProvider } from './types'
 
@@ -64,9 +65,9 @@ function parsePlanResponse(data: unknown): ProviderEnrichment {
 export function createAbrpProvider(apiKey: string): RouteProvider {
   return {
     id: 'abrp',
-    async lookup(from, to): Promise<ProviderEnrichment> {
-      const origin = from.trim()
-      const destination = to.trim()
+    async lookup(query): Promise<ProviderEnrichment> {
+      const origin = placeRefToQuery(query.from)
+      const destination = placeRefToQuery(query.to)
       if (!origin || !destination) {
         throw new Error('Indica ciudad de origen y destino')
       }

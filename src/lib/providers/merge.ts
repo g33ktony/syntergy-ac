@@ -1,4 +1,5 @@
 import { mergeRouteEnrichment, type MergedRouteEnrichment } from '../route-enrichment'
+import type { RouteQuery } from '../../types'
 import type { RouteProvider } from './types'
 
 /**
@@ -9,15 +10,14 @@ import type { RouteProvider } from './types'
  */
 export async function lookupRoute(
   providers: RouteProvider[],
-  from: string,
-  to: string,
+  query: RouteQuery,
 ): Promise<MergedRouteEnrichment> {
   if (providers.length === 0) {
     throw new Error('No hay proveedor de rutas configurado.')
   }
 
   const settled = await Promise.allSettled(
-    providers.map((p) => p.lookup(from, to)),
+    providers.map((p) => p.lookup(query)),
   )
   const results = settled
     .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<RouteProvider['lookup']>>> => r.status === 'fulfilled')

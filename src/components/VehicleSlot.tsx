@@ -66,8 +66,13 @@ function calcResultForVehicle(
         reservePercent: RESERVE_PERCENT,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
-        elevationGainM: route.elevationGainM,
-        elevationLossM: route.elevationLossM,
+        elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+        elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+        returnElevationGainM: route.inbound?.elevationGainM,
+        returnElevationLossM: route.inbound?.elevationLossM,
+        returnDistanceKm: route.inbound?.distanceKm,
+        returnDriveHoursOneWay: route.inbound?.driveHours,
+        tollCostMxn: route.tolls?.costMxn,
       })
     }
     case 'ICE':
@@ -82,8 +87,13 @@ function calcResultForVehicle(
         pricePerLiter,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
-        elevationGainM: route.elevationGainM,
-        elevationLossM: route.elevationLossM,
+        elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+        elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+        returnElevationGainM: route.inbound?.elevationGainM,
+        returnElevationLossM: route.inbound?.elevationLossM,
+        returnDistanceKm: route.inbound?.distanceKm,
+        returnDriveHoursOneWay: route.inbound?.driveHours,
+        tollCostMxn: route.tolls?.costMxn,
       })
     }
     case 'PHEV': {
@@ -98,8 +108,13 @@ function calcResultForVehicle(
         pricePerLiter,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
-        elevationGainM: route.elevationGainM,
-        elevationLossM: route.elevationLossM,
+        elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+        elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+        returnElevationGainM: route.inbound?.elevationGainM,
+        returnElevationLossM: route.inbound?.elevationLossM,
+        returnDistanceKm: route.inbound?.distanceKm,
+        returnDriveHoursOneWay: route.inbound?.driveHours,
+        tollCostMxn: route.tolls?.costMxn,
       })
     }
   }
@@ -126,8 +141,10 @@ function renderResultCard(
   const routeProps = {
     avgSpeedLimitKmh: route.avgSpeedLimitKmh,
     avgTravelSpeedKmh: route.avgTravelSpeedKmh,
-    elevationGainM: route.elevationGainM,
-    elevationLossM: route.elevationLossM,
+    elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+    elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+    returnElevationGainM: route.inbound?.elevationGainM,
+    returnElevationLossM: route.inbound?.elevationLossM,
   }
   switch (result.vehicleType) {
     case 'BEV':

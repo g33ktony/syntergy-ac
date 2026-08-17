@@ -15,6 +15,8 @@ type ResultCardProps = {
   avgTravelSpeedKmh?: number
   elevationGainM?: number
   elevationLossM?: number
+  returnElevationGainM?: number
+  returnElevationLossM?: number
 }
 
 function Metrics({
@@ -32,6 +34,8 @@ function Metrics({
     | 'driveHours'
     | 'energyKWh'
     | 'costMxn'
+    | 'tollCostMxn'
+    | 'totalCostMxn'
     | 'arrivalSocPercent'
     | 'reachesWithReserve'
     | 'chargeStopsEstimate'
@@ -109,9 +113,21 @@ function Metrics({
           <dd>{result.connector}</dd>
         </div>
         <div className="metric-total">
-          <dt>Costo</dt>
+          <dt>{result.tollCostMxn > 0 ? 'Costo energía' : 'Costo'}</dt>
           <dd>{formatMxn(result.costMxn)}</dd>
         </div>
+        {result.tollCostMxn > 0 ? (
+          <>
+            <div>
+              <dt>Casetas</dt>
+              <dd>{formatMxn(result.tollCostMxn)}</dd>
+            </div>
+            <div className="metric-total">
+              <dt>Costo total</dt>
+              <dd>{formatMxn(result.totalCostMxn)}</dd>
+            </div>
+          </>
+        ) : null}
       </dl>
     </div>
   )
@@ -125,9 +141,17 @@ export function ResultCard({
   avgTravelSpeedKmh,
   elevationGainM,
   elevationLossM,
+  returnElevationGainM,
+  returnElevationLossM,
 }: ResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
     const roundTrip = roundTripElevation(elevationGainM, elevationLossM)
+    const rtGain = returnElevationGainM != null
+      ? (elevationGainM ?? 0) + returnElevationGainM
+      : roundTrip.gainM
+    const rtLoss = returnElevationLossM != null
+      ? (elevationLossM ?? 0) + returnElevationLossM
+      : roundTrip.lossM
     return (
       <article className="result-card">
         <Metrics
@@ -145,8 +169,8 @@ export function ResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
-          elevationGainM={roundTrip.gainM}
-          elevationLossM={roundTrip.lossM}
+          elevationGainM={rtGain}
+          elevationLossM={rtLoss}
         />
       </article>
     )

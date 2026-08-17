@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { RouteManager } from './components/RouteManager'
+import { RouteComposer } from './components/RouteComposer'
 import { SettingsPanel } from './components/SettingsPanel'
 import { TripControls } from './components/TripControls'
 import {
@@ -62,9 +62,14 @@ function App() {
     setSlots((prev) => prev.map((s, i) => (i === index ? next : s)))
   }
 
-  function handleGoogleRoute(route: Route) {
+  function handleLookedUpRoute(route: Route) {
     setGoogleRoutes((prev) => [route, ...prev].slice(0, 5))
     setSelectedRouteId(route.id)
+  }
+
+  function handleSelectedRouteChange(route: Route) {
+    setGoogleRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
+    setCustomRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
   }
 
   function handleCustomRouteCreated(route: Route) {
@@ -102,7 +107,6 @@ function App() {
         routes={allRoutes}
         selectedRouteId={selectedRouteId}
         onSelectRouteId={setSelectedRouteId}
-        onGoogleRoute={handleGoogleRoute}
         mode={mode}
         onModeChange={setMode}
         driveStyle={driveStyle}
@@ -111,16 +115,21 @@ function App() {
         onPriceChange={setPricePerKWh}
         pricePerLiter={pricePerLiter}
         onPricePerLiterChange={setPricePerLiter}
-        apiKeyEpoch={apiKeyEpoch}
-        routeSourcePreference={routeSourcePreference}
         unitSystem={unitSystem}
         onApplySuggestedPrice={setPricePerKWh}
+        selectedRoute={selectedRoute}
       />
 
-      <RouteManager
+      <RouteComposer
         customRoutes={customRoutes}
         onCustomRoutesChange={handleCustomRoutesChange}
         onRouteCreated={handleCustomRouteCreated}
+        onLookedUpRoute={handleLookedUpRoute}
+        mode={mode}
+        routeSourcePreference={routeSourcePreference}
+        apiKeyEpoch={apiKeyEpoch}
+        selectedRoute={selectedRoute}
+        onSelectedRouteChange={handleSelectedRouteChange}
       />
 
       <section className="slots" aria-label="Comparación de vehículos">
@@ -143,9 +152,9 @@ function App() {
 
       <p className="footnote">
         El consumo oficial (NEDC/CLTC) no es carretera real. Usamos un factor
-        MX y el estilo de manejo para aproximar. Las paradas de carga y de
-        reabastecimiento son estimaciones por distancia y tanque, no red
-        VEMO/Evergo ni estaciones.
+        MX y el estilo de manejo para aproximar. Las paradas de carga son
+        estimaciones por distancia; los puntos OpenChargeMap son de referencia.
+        Casetas: tabla MX aproximada, corrígela si tienes el dato real.
       </p>
     </main>
   )

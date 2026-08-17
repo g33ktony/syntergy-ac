@@ -1,6 +1,7 @@
 import type { ProviderEnrichment } from '../route-enrichment'
+import type { RouteQuery } from '../../types'
 
-export type RouteProviderId = 'google' | 'abrp'
+export type RouteProviderId = 'google' | 'abrp' | 'osm' | 'ors'
 
 /**
  * Common shape every route data source implements (design §7.4). Each
@@ -9,5 +10,5 @@ export type RouteProviderId = 'google' | 'abrp'
  */
 export interface RouteProvider {
   id: RouteProviderId
-  lookup(from: string, to: string): Promise<ProviderEnrichment>
+  lookup(query: RouteQuery): Promise<ProviderEnrichment>
 }
