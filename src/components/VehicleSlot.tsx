@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
 import { RESERVE_PERCENT } from '../lib/constants'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
@@ -52,6 +53,7 @@ function calcResultForVehicle(
   driveStyle: DriveStyle,
   pricePerKWh: number,
   pricePerLiter: number,
+  phevRechargeAtDestination: boolean,
 ): AnyTripResult | null {
   switch (vehicle.type) {
     case 'BEV': {
@@ -115,6 +117,7 @@ function calcResultForVehicle(
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
         tollCostMxn: route.tolls?.costMxn,
+        rechargeAtDestination: phevRechargeAtDestination,
       })
     }
   }
@@ -190,6 +193,8 @@ export function VehicleSlot({
   pricePerLiter,
   unitSystem,
 }: VehicleSlotProps) {
+  const [phevRecharge, setPhevRecharge] = useState(false)
+
   const vehicle: AnyVehicle | null =
     vehicles.find((v) => v.id === selection.vehicleId) ?? null
   const version: AnyVersion | null =
@@ -205,8 +210,12 @@ export function VehicleSlot({
           driveStyle,
           pricePerKWh,
           pricePerLiter,
+          phevRecharge,
         )
       : null
+
+  const showPhevRechargeToggle =
+    vehicle?.type === 'PHEV' && mode === 'roundTrip'
 
   return (
     <section className="vehicle-slot" aria-label={`Vehículo ${slotIndex + 1}`}>
@@ -264,6 +273,34 @@ export function VehicleSlot({
           ))}
         </select>
       </label>
+
+      {showPhevRechargeToggle ? (
+        <fieldset className="field">
+          <legend>Recarga en destino</legend>
+          <div
+            className="segmented"
+            role="group"
+            aria-label="Recarga en destino (PHEV, redondo)"
+          >
+            <button
+              type="button"
+              className={!phevRecharge ? 'seg active' : 'seg'}
+              aria-pressed={!phevRecharge}
+              onClick={() => setPhevRecharge(false)}
+            >
+              Sin recarga
+            </button>
+            <button
+              type="button"
+              className={phevRecharge ? 'seg active' : 'seg'}
+              aria-pressed={phevRecharge}
+              onClick={() => setPhevRecharge(true)}
+            >
+              Con recarga
+            </button>
+          </div>
+        </fieldset>
+      ) : null}
 
       {!route ? (
         <p className="slot-hint">Selecciona una ruta para ver resultados.</p>
