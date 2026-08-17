@@ -68,6 +68,7 @@ export function PlaceField({
             setHints(photon.map((p) => ({ label: p.label, latlng: p.latlng })))
           }
         } catch {
+          if (!active) return
           setHints([])
         }
       })()

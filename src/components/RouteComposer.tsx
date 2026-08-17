@@ -136,6 +136,16 @@ export function RouteComposer({
     onCustomRoutesChange(next)
   }
 
+  /** Presets/custom have city names; drop leftover pin coords from a prior lookup. */
+  function applyNamedRoute(route: Route) {
+    setFrom(route.from)
+    setTo(route.to)
+    setOrigin(route.origin)
+    setDest(route.dest)
+    setError(null)
+    onSelectPreset?.(route)
+  }
+
   const outboundPath = selectedRoute?.outbound?.path
   const inboundPath = selectedRoute?.inbound?.path
   const mapOrigin = origin ?? selectedRoute?.origin
@@ -157,11 +167,7 @@ export function RouteComposer({
             key={route.id}
             type="button"
             className="preset-chip"
-            onClick={() => {
-              setFrom(route.from)
-              setTo(route.to)
-              onSelectPreset?.(route)
-            }}
+            onClick={() => applyNamedRoute(route)}
           >
             {routeLabel(route)}
           </button>
@@ -298,7 +304,13 @@ export function RouteComposer({
         <ul className="custom-route-list">
           {customRoutes.map((route) => (
             <li key={route.id}>
-              <span>{routeLabel(route)}</span>
+              <button
+                type="button"
+                className="btn-text"
+                onClick={() => applyNamedRoute(route)}
+              >
+                {routeLabel(route)}
+              </button>
               <button
                 type="button"
                 className="btn-text"
