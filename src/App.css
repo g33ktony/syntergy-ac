@@ -298,6 +298,8 @@
   gap: 0.9rem;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   align-items: end;
+  position: relative;
+  z-index: 2;
 }
 
 .route-form .place-field {
@@ -305,7 +307,7 @@
 }
 
 .route-form .place-field:focus-within {
-  z-index: 5;
+  z-index: 6;
 }
 
 .route-summary {
@@ -614,6 +616,8 @@
   width: 100%;
   border: 1px solid var(--line);
   background: var(--paper);
+  position: relative;
+  z-index: 0;
 }
 
 .place-field {
@@ -626,7 +630,7 @@
   padding: 0.25rem 0;
   position: absolute;
   top: 100%;
-  z-index: 4;
+  z-index: 8;
   background: var(--paper);
   border: 1px solid var(--line);
   width: 100%;
