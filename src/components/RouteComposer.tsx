@@ -5,6 +5,7 @@ import { lookupTripFromConfig } from '../lib/providers/lookup-trip'
 import { photonReverse } from '../lib/providers/photon'
 import { reverseGeocode } from '../lib/google'
 import { getGoogleApiKey } from '../lib/config'
+import { createDebouncedTask } from '../lib/debounced-task'
 import { formatMxn } from '../lib/format'
 import { applyTollOverride } from '../lib/tolls'
 import { presetRoutes, routeLabel } from '../data/routes'
@@ -47,7 +48,12 @@ export function RouteComposer({
   const [error, setError] = useState<string | null>(null)
   const [showManual, setShowManual] = useState(false)
   const [manualKm, setManualKm] = useState('')
-  const debounceRef = useRef<number | null>(null)
+  const pinLookupDebounce = useRef(createDebouncedTask())
+
+  useEffect(() => {
+    const debounce = pinLookupDebounce.current
+    return () => debounce.cancel()
+  }, [])
 
   async function runLookup(nextFrom: string, nextTo: string, o?: LatLng, d?: LatLng) {
     if (!nextFrom.trim() || !nextTo.trim()) {
@@ -84,14 +90,14 @@ export function RouteComposer({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    pinLookupDebounce.current.cancel()
     void runLookup(from, to, origin, dest)
   }
 
   function handlePinsChange(nextOrigin: LatLng, nextDest: LatLng) {
     setOrigin(nextOrigin)
     setDest(nextDest)
-    if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    debounceRef.current = window.setTimeout(() => {
+    pinLookupDebounce.current.schedule((isStale) => {
       void (async () => {
         const key = getGoogleApiKey()
         const [fromLabel, toLabel] = await Promise.all([
@@ -106,6 +112,7 @@ export function RouteComposer({
                 () => `${nextDest.lat.toFixed(4)}, ${nextDest.lng.toFixed(4)}`,
               ),
         ])
+        if (isStale()) return
         setFrom(fromLabel)
         setTo(toLabel)
         await runLookup(fromLabel, toLabel, nextOrigin, nextDest)
@@ -138,6 +145,7 @@ export function RouteComposer({
 
   /** Presets/custom have city names; drop leftover pin coords from a prior lookup. */
   function applyNamedRoute(route: Route) {
+    pinLookupDebounce.current.cancel()
     setFrom(route.from)
     setTo(route.to)
     setOrigin(route.origin)
@@ -189,7 +197,10 @@ export function RouteComposer({
         <PlaceField
           label="Desde"
           value={from}
-          onChange={setFrom}
+          onChange={(value) => {
+            setFrom(value)
+            setOrigin(undefined)
+          }}
           placeholder="Ej. CDMX"
           onResolved={(label, latlng) => {
             setFrom(label)
@@ -199,7 +210,10 @@ export function RouteComposer({
         <PlaceField
           label="Hasta"
           value={to}
-          onChange={setTo}
+          onChange={(value) => {
+            setTo(value)
+            setDest(undefined)
+          }}
           placeholder="Ej. Querétaro"
           onResolved={(label, latlng) => {
             setTo(label)

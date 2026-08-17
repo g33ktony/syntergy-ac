@@ -26,6 +26,7 @@ export function PlaceField({
   const fieldRef = useRef<HTMLLabelElement>(null)
   const blurTimer = useRef<number | undefined>(undefined)
   const suppressUntilTyped = useRef(false)
+  const pickGeneration = useRef(0)
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -80,6 +81,7 @@ export function PlaceField({
   }, [value, focused])
 
   async function pick(hint: { label: string; latlng?: LatLng; placeId?: string }) {
+    const generation = ++pickGeneration.current
     suppressUntilTyped.current = true
     onChange(hint.label)
     setFocused(false)
@@ -92,6 +94,7 @@ export function PlaceField({
     if (!key) return
     try {
       const latlng = await geocodePlace(hint.label, key)
+      if (generation !== pickGeneration.current) return
       onResolved?.(hint.label, latlng)
     } catch {
       /* lookup form still works with the string */
@@ -104,6 +107,7 @@ export function PlaceField({
       <input
         value={value}
         onChange={(e) => {
+          pickGeneration.current += 1
           suppressUntilTyped.current = false
           setFocused(true)
           onChange(e.target.value)

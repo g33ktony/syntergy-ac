@@ -53,13 +53,15 @@ function GoogleMapCanvas({
       const originMarker = new g.Marker({
         map,
         position: origin ?? center,
-        draggable: true,
+        draggable: Boolean(origin),
+        visible: Boolean(origin),
         label: 'A',
       })
       const destMarker = new g.Marker({
         map,
         position: dest ?? center,
-        draggable: true,
+        draggable: Boolean(dest),
+        visible: Boolean(dest),
         label: 'B',
       })
       originMarker.addListener('dragend', () => {
@@ -106,6 +108,8 @@ type googleMarker = {
   setPosition: (p: LatLng) => void
   getPosition: () => { lat: () => number; lng: () => number } | null
   addListener: (ev: string, fn: () => void) => void
+  setVisible: (visible: boolean) => void
+  setDraggable: (draggable: boolean) => void
 }
 type googleLine = { setPath: (p: LatLng[]) => void }
 type GoogleMapsUi = {
@@ -136,8 +140,22 @@ function syncGoogle(
 ) {
   const g = window.google?.maps as unknown as GoogleMapsUi | undefined
   if (!g || !refs.map) return
-  if (origin) refs.originMarker?.setPosition(origin)
-  if (dest) refs.destMarker?.setPosition(dest)
+  if (origin) {
+    refs.originMarker?.setPosition(origin)
+    refs.originMarker?.setVisible(true)
+    refs.originMarker?.setDraggable(true)
+  } else {
+    refs.originMarker?.setVisible(false)
+    refs.originMarker?.setDraggable(false)
+  }
+  if (dest) {
+    refs.destMarker?.setPosition(dest)
+    refs.destMarker?.setVisible(true)
+    refs.destMarker?.setDraggable(true)
+  } else {
+    refs.destMarker?.setVisible(false)
+    refs.destMarker?.setDraggable(false)
+  }
   refs.outLine?.setPath(outboundPath ?? [])
   refs.inLine?.setPath(inboundPath ?? [])
   const bounds = new g.LatLngBounds()
@@ -193,13 +211,15 @@ function OsmMapCanvas({
         iconAnchor: [14, 14],
       })
       const originMarker = L.marker([center.lat, center.lng], {
-        draggable: true,
+        draggable: Boolean(origin),
         icon: originIcon,
-      }).addTo(map)
+      })
       const destMarker = L.marker([center.lat, center.lng], {
-        draggable: true,
+        draggable: Boolean(dest),
         icon: destIcon,
-      }).addTo(map)
+      })
+      if (origin) originMarker.addTo(map)
+      if (dest) destMarker.addTo(map)
       originMarker.on('dragend', () => {
         const o = originMarker.getLatLng()
         const d = destMarker.getLatLng()
@@ -248,8 +268,20 @@ function syncOsm(
   inboundPath?: LatLng[],
 ) {
   if (!refs.map) return
-  if (origin) refs.originMarker?.setLatLng([origin.lat, origin.lng])
-  if (dest) refs.destMarker?.setLatLng([dest.lat, dest.lng])
+  if (origin) {
+    refs.originMarker?.setLatLng([origin.lat, origin.lng])
+    refs.originMarker?.addTo(refs.map)
+    refs.originMarker?.dragging?.enable()
+  } else {
+    refs.originMarker?.remove()
+  }
+  if (dest) {
+    refs.destMarker?.setLatLng([dest.lat, dest.lng])
+    refs.destMarker?.addTo(refs.map)
+    refs.destMarker?.dragging?.enable()
+  } else {
+    refs.destMarker?.remove()
+  }
   refs.outLine?.setLatLngs((outboundPath ?? []).map((p) => [p.lat, p.lng]))
   refs.inLine?.setLatLngs((inboundPath ?? []).map((p) => [p.lat, p.lng]))
   const pts = [...(outboundPath ?? []), ...(inboundPath ?? [])]
