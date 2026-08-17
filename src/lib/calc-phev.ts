@@ -3,6 +3,7 @@ import {
   DRIVE_STYLE_MULTIPLIERS,
   FUEL_MX_FACTOR,
 } from './constants'
+import { calcTankFeasibility } from './calc-tank'
 import type { PhevTripInput, PhevTripResult, PhevTripResultBase } from '../types'
 
 function driveHoursForDistance(
@@ -15,42 +16,70 @@ function driveHoursForDistance(
   return distanceKm / DEFAULT_HIGHWAY_KMH
 }
 
+function withTankMetrics(
+  base: Omit<
+    PhevTripResultBase,
+    | 'arrivalFuelPercent'
+    | 'reachesWithoutStop'
+    | 'fuelStopsEstimate'
+    | 'rechargeAtDestination'
+  >,
+  tankLiters: number,
+  rechargeAtDestination: boolean,
+): PhevTripResultBase {
+  return {
+    ...base,
+    ...calcTankFeasibility(base.litersUsed, tankLiters),
+    rechargeAtDestination,
+  }
+}
+
 /**
- * Simple v1 blend (design §"PHEV" / plan): assume start at 100% battery,
- * consume electric range first (MX-realism adjusted), remainder on fuel.
+ * Simple blend (design §"PHEV" / plan): assume start at 100% battery,
+ * consume electric range first, remainder on fuel.
+ *
+ * EV energy uses implied kWh/100 from pack ÷ official range, then the same
+ * MX_FACTOR × drive-style multipliers as BEV `calcTrip` (consumption
+ * direction — not a haircut on official range).
  */
 function calcOneWay(input: PhevTripInput): PhevTripResultBase {
   const { distanceKm, version, driveStyle, pricePerKWh, pricePerLiter, driveHoursOneWay } =
     input
 
   const styleMult = DRIVE_STYLE_MULTIPLIERS[driveStyle]
-  // Drive style shrinks effective EV range (same direction as BEV
-  // consumption multipliers): aggressive uses the battery faster.
+  const impliedKWhPer100 =
+    version.electricRangeKmOfficial > 0
+      ? (version.batteryKWh / version.electricRangeKmOfficial) * 100
+      : 0
+  const evConsumptionEffective = impliedKWhPer100 * FUEL_MX_FACTOR * styleMult
   const electricRangeEffective =
-    (version.electricRangeKmOfficial * FUEL_MX_FACTOR) / styleMult
+    evConsumptionEffective > 0
+      ? (version.batteryKWh / evConsumptionEffective) * 100
+      : 0
+
   const electricKmUsed = Math.min(distanceKm, electricRangeEffective)
   const fuelKmUsed = Math.max(0, distanceKm - electricRangeEffective)
-
-  const energyKWh =
-    electricRangeEffective > 0
-      ? (electricKmUsed / electricRangeEffective) * version.batteryKWh
-      : 0
+  const energyKWh = (electricKmUsed * evConsumptionEffective) / 100
 
   const consumptionEffective =
     version.consumptionLPer100ChargeSustaining * FUEL_MX_FACTOR * styleMult
   const litersUsed = (fuelKmUsed * consumptionEffective) / 100
 
-  return {
-    distanceKm,
-    driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
-    electricKmUsed,
-    fuelKmUsed,
-    energyKWh,
-    litersUsed,
-    costMxn: energyKWh * pricePerKWh + litersUsed * pricePerLiter,
-    usedElectricOnly: fuelKmUsed === 0,
-    fuel: version.fuel,
-  }
+  return withTankMetrics(
+    {
+      distanceKm,
+      driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
+      electricKmUsed,
+      fuelKmUsed,
+      energyKWh,
+      litersUsed,
+      costMxn: energyKWh * pricePerKWh + litersUsed * pricePerLiter,
+      usedElectricOnly: fuelKmUsed === 0,
+      fuel: version.fuel,
+    },
+    version.tankLiters,
+    false,
+  )
 }
 
 /** Fuel-only leg: used for the return trip when no recharge is assumed. */
@@ -64,17 +93,21 @@ function calcFuelOnlyLeg(
     version.consumptionLPer100ChargeSustaining * FUEL_MX_FACTOR * styleMult
   const litersUsed = (distanceKm * consumptionEffective) / 100
 
-  return {
-    distanceKm,
-    driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
-    electricKmUsed: 0,
-    fuelKmUsed: distanceKm,
-    energyKWh: 0,
-    litersUsed,
-    costMxn: litersUsed * pricePerLiter,
-    usedElectricOnly: false,
-    fuel: version.fuel,
-  }
+  return withTankMetrics(
+    {
+      distanceKm,
+      driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
+      electricKmUsed: 0,
+      fuelKmUsed: distanceKm,
+      energyKWh: 0,
+      litersUsed,
+      costMxn: litersUsed * pricePerLiter,
+      usedElectricOnly: false,
+      fuel: version.fuel,
+    },
+    version.tankLiters,
+    false,
+  )
 }
 
 /**
@@ -82,6 +115,8 @@ function calcFuelOnlyLeg(
  * Conservative default: round trips assume NO recharge at destination, so
  * the return leg runs fuel-only. Pass `rechargeAtDestination: true` to
  * instead double the one-way leg (symmetric electric+fuel both ways).
+ *
+ * Fuel-stop feasibility uses total liters vs tank (same helper as ICE/HEV).
  */
 export function calcPhevTrip(input: PhevTripInput): PhevTripResult {
   const oneWay = calcOneWay(input)
@@ -90,9 +125,12 @@ export function calcPhevTrip(input: PhevTripInput): PhevTripResult {
     return oneWay
   }
 
-  const returnLeg = input.rechargeAtDestination
+  const rechargeAtDestination = Boolean(input.rechargeAtDestination)
+  const returnLeg = rechargeAtDestination
     ? calcOneWay({ ...input, driveHoursOneWay: input.driveHoursOneWay })
     : calcFuelOnlyLeg(input, input.driveHoursOneWay)
+
+  const litersUsed = oneWay.litersUsed + returnLeg.litersUsed
 
   return {
     distanceKm: oneWay.distanceKm + returnLeg.distanceKm,
@@ -100,10 +138,12 @@ export function calcPhevTrip(input: PhevTripInput): PhevTripResult {
     electricKmUsed: oneWay.electricKmUsed + returnLeg.electricKmUsed,
     fuelKmUsed: oneWay.fuelKmUsed + returnLeg.fuelKmUsed,
     energyKWh: oneWay.energyKWh + returnLeg.energyKWh,
-    litersUsed: oneWay.litersUsed + returnLeg.litersUsed,
+    litersUsed,
     costMxn: oneWay.costMxn + returnLeg.costMxn,
     usedElectricOnly: oneWay.usedElectricOnly && returnLeg.usedElectricOnly,
     fuel: oneWay.fuel,
+    rechargeAtDestination,
+    ...calcTankFeasibility(litersUsed, input.version.tankLiters),
     oneWay,
   }
 }

@@ -2,8 +2,8 @@ import {
   DEFAULT_HIGHWAY_KMH,
   DRIVE_STYLE_MULTIPLIERS,
   FUEL_MX_FACTOR,
-  FUEL_RANGE_SAFETY_FACTOR,
 } from './constants'
+import { calcTankFeasibility } from './calc-tank'
 import type { FuelTripInput, FuelTripResult, FuelTripResultBase } from '../types'
 
 function driveHoursForDistance(
@@ -16,13 +16,6 @@ function driveHoursForDistance(
   return distanceKm / DEFAULT_HIGHWAY_KMH
 }
 
-function effectiveRangeKm(
-  tankLiters: number,
-  consumptionLPer100Effective: number,
-): number {
-  return (tankLiters / consumptionLPer100Effective) * 100
-}
-
 function calcOneWay(input: FuelTripInput): FuelTripResultBase {
   const { distanceKm, version, driveStyle, pricePerLiter, driveHoursOneWay } =
     input
@@ -31,25 +24,14 @@ function calcOneWay(input: FuelTripInput): FuelTripResultBase {
   const consumptionEffective =
     version.consumptionLPer100 * FUEL_MX_FACTOR * styleMult
   const litersUsed = (distanceKm * consumptionEffective) / 100
-  const arrivalFuelPercent = 100 - (litersUsed / version.tankLiters) * 100
-
-  const rangeEffective = effectiveRangeKm(
-    version.tankLiters,
-    consumptionEffective,
-  )
-  const reachesWithoutStop = distanceKm <= rangeEffective * FUEL_RANGE_SAFETY_FACTOR
-  const fuelStopsEstimate = reachesWithoutStop
-    ? 0
-    : Math.ceil(distanceKm / (rangeEffective * FUEL_RANGE_SAFETY_FACTOR)) - 1
+  const tank = calcTankFeasibility(litersUsed, version.tankLiters)
 
   return {
     distanceKm,
     driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
     litersUsed,
     costMxn: litersUsed * pricePerLiter,
-    arrivalFuelPercent,
-    reachesWithoutStop,
-    fuelStopsEstimate,
+    ...tank,
     fuel: version.fuel,
   }
 }

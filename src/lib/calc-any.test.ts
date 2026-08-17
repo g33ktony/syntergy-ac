@@ -50,5 +50,28 @@ describe('calcAnyTrip dispatcher', () => {
     expect(row.type).toBe('PHEV')
     expect(row.totalCostMxn).toBe(result.costMxn)
     expect(row.costPerKm).toBeCloseTo(result.costMxn / 50, 5)
+    expect(row.feasibleWithoutStop).toBe(true)
+    expect(result.vehicleType).toBe('PHEV')
+    if (result.vehicleType !== 'PHEV') return
+    expect(result.reachesWithoutStop).toBe(true)
+  })
+
+  it('marks PHEV comparison rows infeasible when the tank cannot cover the trip', () => {
+    const version = phevVehicles[0].versions[0]
+    const result = calcAnyTrip({
+      vehicleType: 'PHEV',
+      distanceKm: 540,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+    })
+    const row = toComparisonRow('t', 'v', 'PHEV', result)
+    expect(result.vehicleType).toBe('PHEV')
+    if (result.vehicleType !== 'PHEV') return
+    expect(result.reachesWithoutStop).toBe(false)
+    expect(row.feasibleWithoutStop).toBe(false)
+    expect(row.feasibilityReason).toBe('Requiere reabastecer antes de llegar')
   })
 })

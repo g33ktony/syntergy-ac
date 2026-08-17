@@ -1,4 +1,5 @@
 import type { PhevTripResult, PhevTripResultBase, TripMode, UnitSystem } from '../types'
+import { formatHours, formatLocaleNumber, formatMxn, fuelTypeLabel } from '../lib/format'
 import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
 
 type PhevResultCardProps = {
@@ -7,19 +8,10 @@ type PhevResultCardProps = {
   unitSystem: UnitSystem
 }
 
-function formatHours(hours: number): string {
-  const h = Math.floor(hours)
-  const m = Math.round((hours - h) * 60)
-  if (h <= 0) return `${m} min`
-  if (m === 0) return `${h} h`
-  return `${h} h ${m} min`
-}
-
-function formatNumber(value: number, digits = 1): string {
-  return value.toLocaleString('es-MX', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })
+function roundTripLabel(rechargeAtDestination: boolean): string {
+  return rechargeAtDestination
+    ? 'Redondo (con recarga en destino)'
+    : 'Redondo (sin recarga en destino)'
 }
 
 function Metrics({
@@ -35,6 +27,7 @@ function Metrics({
     { distanceKm: result.distanceKm, driveHours: result.driveHours },
     unitSystem,
   )
+  const fuelWord = fuelTypeLabel(result.fuel).toLowerCase()
 
   return (
     <div className="metrics">
@@ -60,7 +53,7 @@ function Metrics({
           </dd>
         </div>
         <div>
-          <dt>Tramo en gasolina</dt>
+          <dt>Tramo en {fuelWord}</dt>
           <dd>
             {formatTripUnits(result.fuelKmUsed, 'distance', unitSystem, 0)} ·{' '}
             {formatTripUnits(result.litersUsed, 'volume', unitSystem)}
@@ -68,14 +61,27 @@ function Metrics({
         </div>
         <div>
           <dt>Costo</dt>
-          <dd>${formatNumber(result.costMxn)} MXN</dd>
+          <dd>{formatMxn(result.costMxn)}</dd>
+        </div>
+        <div>
+          <dt>% tanque al llegar</dt>
+          <dd className={result.reachesWithoutStop ? 'soc-ok' : 'soc-low'}>
+            {formatLocaleNumber(Math.max(result.arrivalFuelPercent, 0), 0)}%
+            {result.reachesWithoutStop
+              ? ' · alcanza sin parada'
+              : ' · requiere parada de reabastecimiento'}
+          </dd>
+        </div>
+        <div>
+          <dt>Paradas de reabastecimiento (est.)</dt>
+          <dd>{result.fuelStopsEstimate}</dd>
         </div>
         <div>
           <dt>Modo</dt>
           <dd>
             {result.usedElectricOnly
               ? 'Solo eléctrico'
-              : 'Eléctrico + gasolina'}
+              : `Eléctrico + ${fuelWord}`}
           </dd>
         </div>
       </dl>
@@ -90,7 +96,7 @@ export function PhevResultCard({ result, mode, unitSystem }: PhevResultCardProps
         <Metrics result={result.oneWay} label="Ida" unitSystem={unitSystem} />
         <Metrics
           result={result}
-          label="Redondo (sin recarga en destino)"
+          label={roundTripLabel(result.rechargeAtDestination)}
           unitSystem={unitSystem}
         />
       </article>

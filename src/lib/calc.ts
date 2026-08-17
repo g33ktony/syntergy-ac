@@ -100,18 +100,21 @@ export type AnyTripInput =
   | ({ vehicleType: 'ICE' | 'HEV' } & FuelTripInput)
   | ({ vehicleType: 'PHEV' } & PhevTripInput)
 
-export type AnyTripResult = TripResult | FuelTripResult | PhevTripResult
+export type AnyTripResult =
+  | ({ vehicleType: 'BEV' } & TripResult)
+  | ({ vehicleType: 'ICE' | 'HEV' } & FuelTripResult)
+  | ({ vehicleType: 'PHEV' } & PhevTripResult)
 
 /** Single entry point that dispatches to the right pure calculator by powertrain. */
 export function calcAnyTrip(input: AnyTripInput): AnyTripResult {
   switch (input.vehicleType) {
     case 'BEV':
-      return calcTrip(input)
+      return { vehicleType: 'BEV', ...calcTrip(input) }
     case 'ICE':
     case 'HEV':
-      return calcFuelTrip(input)
+      return { vehicleType: input.vehicleType, ...calcFuelTrip(input) }
     case 'PHEV':
-      return calcPhevTrip(input)
+      return { vehicleType: 'PHEV', ...calcPhevTrip(input) }
   }
 }
 
@@ -125,6 +128,12 @@ function feasibilityReason(
     : 'Requiere reabastecer antes de llegar'
 }
 
+function isFeasibleWithoutStop(result: AnyTripResult): boolean {
+  return result.vehicleType === 'BEV'
+    ? result.reachesWithReserve
+    : result.reachesWithoutStop
+}
+
 /** Reduces any powertrain's trip result to the shared comparison row shape. */
 export function toComparisonRow(
   vehicleId: string,
@@ -132,12 +141,7 @@ export function toComparisonRow(
   type: AnyVehicle['type'],
   result: AnyTripResult,
 ): ComparisonRow {
-  const feasible =
-    'reachesWithReserve' in result
-      ? result.reachesWithReserve
-      : 'reachesWithoutStop' in result
-        ? result.reachesWithoutStop
-        : true // PHEV v1: no hard stop concept yet (design §"PHEV")
+  const feasible = isFeasibleWithoutStop(result)
 
   return {
     vehicleId,

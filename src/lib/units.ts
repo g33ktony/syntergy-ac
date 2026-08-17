@@ -1,4 +1,5 @@
 import { DEFAULT_HIGHWAY_KMH } from './constants'
+import { formatLocaleNumber } from './format'
 import type { SpeedDisplayKind, UnitSystem } from '../types'
 
 const KM_PER_MI = 1.609344
@@ -32,13 +33,6 @@ export type TripUnitKind =
   | 'elevation'
   | 'energy'
 
-function formatNumber(value: number, digits: number): string {
-  return value.toLocaleString('es-MX', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })
-}
-
 /** Format a metric/SI value for the active unit system. Copy stays Spanish. */
 export function formatTripUnits(
   value: number,
@@ -49,30 +43,30 @@ export function formatTripUnits(
   switch (kind) {
     case 'distance': {
       if (unitSystem === 'imperial') {
-        return `${formatNumber(kmToMi(value), digits ?? 0)} mi`
+        return `${formatLocaleNumber(kmToMi(value), digits ?? 0)} mi`
       }
-      return `${formatNumber(value, digits ?? 0)} km`
+      return `${formatLocaleNumber(value, digits ?? 0)} km`
     }
     case 'speed': {
       if (unitSystem === 'imperial') {
-        return `${formatNumber(kmhToMph(value), digits ?? 0)} mph`
+        return `${formatLocaleNumber(kmhToMph(value), digits ?? 0)} mph`
       }
-      return `${formatNumber(value, digits ?? 0)} km/h`
+      return `${formatLocaleNumber(value, digits ?? 0)} km/h`
     }
     case 'volume': {
       if (unitSystem === 'imperial') {
-        return `${formatNumber(litersToUsGallons(value), digits ?? 1)} gal`
+        return `${formatLocaleNumber(litersToUsGallons(value), digits ?? 1)} gal`
       }
-      return `${formatNumber(value, digits ?? 1)} L`
+      return `${formatLocaleNumber(value, digits ?? 1)} L`
     }
     case 'elevation': {
       if (unitSystem === 'imperial') {
-        return `${formatNumber(metersToFeet(value), digits ?? 0)} ft`
+        return `${formatLocaleNumber(metersToFeet(value), digits ?? 0)} ft`
       }
-      return `${formatNumber(value, digits ?? 0)} m`
+      return `${formatLocaleNumber(value, digits ?? 0)} m`
     }
     case 'energy':
-      return `${formatNumber(value, digits ?? 1)} kWh`
+      return `${formatLocaleNumber(value, digits ?? 1)} kWh`
   }
 }
 

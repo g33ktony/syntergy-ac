@@ -74,8 +74,8 @@ function App() {
       <header className="app-header">
         <h1>Syntergy AC</h1>
         <p className="tagline">
-          Compara autonomía y costo de viaje entre vehículos eléctricos en
-          México.
+          Compara autonomía y costo de viaje entre eléctricos, híbridos y
+          gasolina en México.
         </p>
         <SettingsPanel
           onApiKeyChange={() => setApiKeyEpoch((n) => n + 1)}
@@ -126,8 +126,9 @@ function App() {
 
       <p className="footnote">
         El consumo oficial (NEDC/CLTC) no es carretera real. Usamos un factor
-        MX y el estilo de manejo para aproximar. Las paradas de carga son
-        estimaciones por distancia, no red VEMO/Evergo.
+        MX y el estilo de manejo para aproximar. Las paradas de carga y de
+        reabastecimiento son estimaciones por distancia y tanque, no red
+        VEMO/Evergo ni estaciones.
       </p>
     </main>
   )

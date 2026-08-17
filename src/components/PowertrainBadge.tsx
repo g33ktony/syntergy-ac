@@ -1,21 +1,27 @@
-import type { Powertrain } from '../types'
+import type { FuelType, Powertrain } from '../types'
+import { POWERTRAIN_GROUP_LABELS } from '../lib/format'
 
-const LABELS: Record<Powertrain, string> = {
-  BEV: 'Eléctrico',
-  HEV: 'Híbrido',
-  PHEV: 'Híbrido enchufable',
-  ICE: 'Gasolina',
+type PowertrainBadgeProps = {
+  type: Powertrain
+  /** ICE/HEV/PHEV fuel, when a version is selected — avoids labeling all ICE as gasolina. */
+  fuel?: FuelType
 }
 
 /**
- * Small label for a vehicle's powertrain type. New Phase 2 component —
- * intended to be dropped next to model/version selects once Phase 1 wires
- * the multi-fuel catalog in (plan Task 6).
+ * Small label for a vehicle's powertrain type. ICE is "Combustión" (covers
+ * gasolina and diésel); pass `fuel` to show the selected version's fuel.
  */
-export function PowertrainBadge({ type }: { type: Powertrain }) {
+export function PowertrainBadge({ type, fuel }: PowertrainBadgeProps) {
+  const label =
+    type === 'ICE' && fuel
+      ? fuel === 'diesel'
+        ? 'Diésel'
+        : 'Gasolina'
+      : POWERTRAIN_GROUP_LABELS[type]
+
   return (
     <span className={`powertrain-badge powertrain-badge--${type.toLowerCase()}`}>
-      {LABELS[type]}
+      {label}
     </span>
   )
 }

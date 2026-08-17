@@ -1,9 +1,11 @@
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
 import { RESERVE_PERCENT } from '../lib/constants'
+import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
 import type {
   AnyVehicle,
   AnyVersion,
   DriveStyle,
+  FuelType,
   Route,
   TripMode,
   UnitSystem,
@@ -97,33 +99,30 @@ function calcResultForVehicle(
   }
 }
 
-function renderResultCard(
-  vehicle: AnyVehicle,
-  result: AnyTripResult,
-  mode: TripMode,
-  unitSystem: UnitSystem,
-) {
-  switch (vehicle.type) {
+function versionFuel(version: AnyVersion | null): FuelType | undefined {
+  return version && 'fuel' in version ? version.fuel : undefined
+}
+
+function vehiclesByPowertrain(vehicles: AnyVehicle[]) {
+  return POWERTRAIN_GROUP_ORDER.map((type) => ({
+    type,
+    label: POWERTRAIN_GROUP_LABELS[type],
+    items: vehicles.filter((vehicle) => vehicle.type === type),
+  })).filter((group) => group.items.length > 0)
+}
+
+function renderResultCard(result: AnyTripResult, mode: TripMode, unitSystem: UnitSystem) {
+  switch (result.vehicleType) {
     case 'BEV':
-      return (
-        <ResultCard result={result as never} mode={mode} unitSystem={unitSystem} />
-      )
+      return <ResultCard result={result} mode={mode} unitSystem={unitSystem} />
     case 'ICE':
     case 'HEV':
       return (
-        <FuelResultCard
-          result={result as never}
-          mode={mode}
-          unitSystem={unitSystem}
-        />
+        <FuelResultCard result={result} mode={mode} unitSystem={unitSystem} />
       )
     case 'PHEV':
       return (
-        <PhevResultCard
-          result={result as never}
-          mode={mode}
-          unitSystem={unitSystem}
-        />
+        <PhevResultCard result={result} mode={mode} unitSystem={unitSystem} />
       )
   }
 }
@@ -162,7 +161,9 @@ export function VehicleSlot({
     <section className="vehicle-slot" aria-label={`Vehículo ${slotIndex + 1}`}>
       <header className="slot-header">
         <span className="slot-index">Vehículo {slotIndex + 1}</span>
-        {vehicle ? <PowertrainBadge type={vehicle.type} /> : null}
+        {vehicle ? (
+          <PowertrainBadge type={vehicle.type} fuel={versionFuel(version)} />
+        ) : null}
       </header>
 
       <label className="field">
@@ -178,10 +179,14 @@ export function VehicleSlot({
           }}
         >
           <option value="">Elegir modelo…</option>
-          {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.brand} {v.model}
-            </option>
+          {vehiclesByPowertrain(vehicles).map((group) => (
+            <optgroup key={group.type} label={group.label}>
+              {group.items.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.brand} {v.model}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </label>
@@ -214,7 +219,7 @@ export function VehicleSlot({
       ) : !vehicle || !version ? (
         <p className="slot-hint">Elige modelo y versión.</p>
       ) : result ? (
-        renderResultCard(vehicle, result, mode, unitSystem)
+        renderResultCard(result, mode, unitSystem)
       ) : null}
     </section>
   )

@@ -1,25 +1,11 @@
 import type { FuelTripResult, FuelTripResultBase, TripMode, UnitSystem } from '../types'
+import { formatHours, formatLocaleNumber, formatMxn, fuelTypeLabel } from '../lib/format'
 import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
 
 type FuelResultCardProps = {
   result: FuelTripResult
   mode: TripMode
   unitSystem: UnitSystem
-}
-
-function formatHours(hours: number): string {
-  const h = Math.floor(hours)
-  const m = Math.round((hours - h) * 60)
-  if (h <= 0) return `${m} min`
-  if (m === 0) return `${h} h`
-  return `${h} h ${m} min`
-}
-
-function formatNumber(value: number, digits = 1): string {
-  return value.toLocaleString('es-MX', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })
 }
 
 function Metrics({
@@ -58,12 +44,12 @@ function Metrics({
         </div>
         <div>
           <dt>Costo</dt>
-          <dd>${formatNumber(result.costMxn)} MXN</dd>
+          <dd>{formatMxn(result.costMxn)}</dd>
         </div>
         <div>
           <dt>% tanque al llegar</dt>
           <dd className={result.reachesWithoutStop ? 'soc-ok' : 'soc-low'}>
-            {formatNumber(Math.max(result.arrivalFuelPercent, 0), 0)}%
+            {formatLocaleNumber(Math.max(result.arrivalFuelPercent, 0), 0)}%
             {result.reachesWithoutStop
               ? ' · alcanza sin parada'
               : ' · requiere parada de reabastecimiento'}
@@ -75,7 +61,7 @@ function Metrics({
         </div>
         <div>
           <dt>Tipo de combustible</dt>
-          <dd>{result.fuel === 'gasolina' ? 'Gasolina' : 'Diésel'}</dd>
+          <dd>{fuelTypeLabel(result.fuel)}</dd>
         </div>
       </dl>
     </div>

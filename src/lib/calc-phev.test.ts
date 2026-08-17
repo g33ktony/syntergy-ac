@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { calcPhevTrip } from './calc-phev'
+import { FUEL_MX_FACTOR } from './constants'
+import { presetRoutes } from '../data/routes'
+import { phevVehicles } from '../data/vehicles-phev'
 import type { PhevVersion } from '../types'
 
 function ravFourPrime(): PhevVersion {
@@ -34,6 +37,30 @@ describe('calcPhevTrip', () => {
     expect(result.litersUsed).toBe(0)
     expect(result.electricKmUsed).toBe(40)
     expect(result.costMxn).toBeGreaterThan(0)
+    expect(result.reachesWithoutStop).toBe(true)
+    expect(result.fuelStopsEstimate).toBe(0)
+    expect(result.arrivalFuelPercent).toBe(100)
+  })
+
+  it('applies MX_FACTOR to implied EV kWh/100 like BEV, not as a range haircut', () => {
+    const version = ravFourPrime()
+    const result = calcPhevTrip({
+      distanceKm: 40,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay',
+    })
+
+    const impliedKWhPer100 = (version.batteryKWh / version.electricRangeKmOfficial) * 100
+    const expectedEnergy = (40 * impliedKWhPer100 * FUEL_MX_FACTOR) / 100
+    expect(result.energyKWh).toBeCloseTo(expectedEnergy, 5)
+    expect(result.electricKmUsed).toBe(40)
+    // Factor < 1 on consumption lengthens effective range vs official km.
+    expect(version.electricRangeKmOfficial / FUEL_MX_FACTOR).toBeGreaterThan(
+      version.electricRangeKmOfficial,
+    )
   })
 
   it('applies drive-style to EV range and energy on electric-only trips', () => {
@@ -131,5 +158,57 @@ describe('calcPhevTrip', () => {
       5,
     )
     expect(round.distanceKm).toBe(300)
+    expect(round.rechargeAtDestination).toBe(false)
+  })
+
+  it('flags a fuel stop when charge-sustaining liters exceed the tank', () => {
+    const version = ravFourPrime()
+    const result = calcPhevTrip({
+      distanceKm: 1200,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay',
+    })
+
+    expect(result.usedElectricOnly).toBe(false)
+    expect(result.litersUsed).toBeGreaterThan(version.tankLiters)
+    expect(result.reachesWithoutStop).toBe(false)
+    expect(result.fuelStopsEstimate).toBeGreaterThan(0)
+  })
+
+  it('recomputes round-trip PHEV stops when one-way fits but total liters do not', () => {
+    const gdlCdmx = presetRoutes.find((route) => route.id === 'gdl-cdmx')!
+    const version = phevVehicles
+      .find((vehicle) => vehicle.id === 'toyota-rav4-prime')!
+      .versions[0]
+
+    const oneWay = calcPhevTrip({
+      distanceKm: gdlCdmx.distanceKm,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay',
+      driveHoursOneWay: gdlCdmx.driveHoursOneWay,
+    })
+    const roundTrip = calcPhevTrip({
+      distanceKm: gdlCdmx.distanceKm,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+      driveHoursOneWay: gdlCdmx.driveHoursOneWay,
+    })
+
+    expect(oneWay.reachesWithoutStop).toBe(true)
+    expect(oneWay.fuelStopsEstimate).toBe(0)
+    expect(roundTrip.oneWay!.reachesWithoutStop).toBe(true)
+    expect(roundTrip.litersUsed).toBeGreaterThan(version.tankLiters * 0.85)
+    expect(roundTrip.reachesWithoutStop).toBe(false)
+    expect(roundTrip.fuelStopsEstimate).toBeGreaterThan(0)
+    expect(roundTrip.rechargeAtDestination).toBe(false)
   })
 })

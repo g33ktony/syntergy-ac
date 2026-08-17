@@ -177,8 +177,13 @@ export type PhevTripResultBase = {
   energyKWh: number
   litersUsed: number
   costMxn: number
+  arrivalFuelPercent: number
+  reachesWithoutStop: boolean
+  fuelStopsEstimate: number
   usedElectricOnly: boolean
   fuel: FuelType
+  /** Echo of the input flag; only meaningful on round-trip results. */
+  rechargeAtDestination: boolean
 }
 
 export type PhevTripResult = PhevTripResultBase & {

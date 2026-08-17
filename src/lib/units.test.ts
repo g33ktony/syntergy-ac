@@ -8,6 +8,7 @@ import {
   litersToUsGallons,
   resolveAvgSpeedKmh,
 } from './units'
+import { formatHours, formatMxn, fuelTypeLabel } from './format'
 
 describe('units conversions', () => {
   it('converts distance and speed to imperial', () => {
@@ -65,5 +66,16 @@ describe('resolveAvgSpeedKmh', () => {
     expect(row.label).toBe('Vel. promedio')
     expect(row.value).toContain('mph')
     expect(row.value).toContain('estimada')
+  })
+})
+
+describe('format helpers', () => {
+  it('formats hours, MXN, and fuel type labels', () => {
+    expect(formatHours(0.5)).toBe('30 min')
+    expect(formatHours(2)).toBe('2 h')
+    expect(formatHours(2.5)).toBe('2 h 30 min')
+    expect(formatMxn(19.2)).toBe('$19.2 MXN')
+    expect(fuelTypeLabel('gasolina')).toBe('Gasolina')
+    expect(fuelTypeLabel('diesel')).toBe('Diésel')
   })
 })

@@ -1,25 +1,11 @@
 import type { TripResult, TripMode, UnitSystem } from '../types'
+import { formatHours, formatLocaleNumber, formatMxn } from '../lib/format'
 import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
 
 type ResultCardProps = {
   result: TripResult
   mode: TripMode
   unitSystem: UnitSystem
-}
-
-function formatHours(hours: number): string {
-  const h = Math.floor(hours)
-  const m = Math.round((hours - h) * 60)
-  if (h <= 0) return `${m} min`
-  if (m === 0) return `${h} h`
-  return `${h} h ${m} min`
-}
-
-function formatNumber(value: number, digits = 1): string {
-  return value.toLocaleString('es-MX', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })
 }
 
 function Metrics({
@@ -69,7 +55,7 @@ function Metrics({
         </div>
         <div>
           <dt>Costo</dt>
-          <dd>${formatNumber(result.costMxn)} MXN</dd>
+          <dd>{formatMxn(result.costMxn)}</dd>
         </div>
         <div>
           <dt>% batería al llegar</dt>
@@ -78,7 +64,7 @@ function Metrics({
               result.reachesWithReserve ? 'soc-ok' : 'soc-low'
             }
           >
-            {formatNumber(Math.max(result.arrivalSocPercent, 0), 0)}%
+            {formatLocaleNumber(Math.max(result.arrivalSocPercent, 0), 0)}%
             {result.reachesWithReserve
               ? ' · alcanza (reserva 15%)'
               : ' · no alcanza con reserva'}
