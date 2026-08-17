@@ -40,8 +40,14 @@ declare global {
   interface Window {
     google?: GoogleMapsNamespace
     __syntergyAcMapsReady?: () => void
+    /** Google calls this global if the key is invalid/misconfigured — it
+     * does NOT reject our load callback, so without this hook a bad key
+     * leaves the caller stuck on "Consultando…" forever. */
+    gm_authFailure?: () => void
   }
 }
+
+const MAPS_LOAD_TIMEOUT_MS = 10_000
 
 let mapsLoadPromise: Promise<void> | null = null
 
@@ -52,13 +58,44 @@ function loadMapsJs(apiKey: string): Promise<void> {
   if (mapsLoadPromise) return mapsLoadPromise
 
   mapsLoadPromise = new Promise((resolve, reject) => {
+    let settled = false
+    const settle = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeoutId)
+      fn()
+    }
+
+    const timeoutId = setTimeout(() => {
+      mapsLoadPromise = null
+      settle(() =>
+        reject(
+          new Error(
+            'Google Maps no respondió a tiempo. Verifica que la API key tenga habilitadas "Maps JavaScript API" y "Distance Matrix API", que la facturación esté activa, y que el dominio/localhost esté permitido en las restricciones de la key.',
+          ),
+        ),
+      )
+    }, MAPS_LOAD_TIMEOUT_MS)
+
+    window.gm_authFailure = () => {
+      delete window.gm_authFailure
+      mapsLoadPromise = null
+      settle(() =>
+        reject(
+          new Error(
+            'Google rechazó la API key (auth). Revisa restricciones de dominio/HTTP referrer y que "Maps JavaScript API" esté habilitada.',
+          ),
+        ),
+      )
+    }
+
     const existing = document.querySelector<HTMLScriptElement>(
       'script[data-syntergy-maps]',
     )
     if (existing) {
-      existing.addEventListener('load', () => resolve())
+      existing.addEventListener('load', () => settle(resolve))
       existing.addEventListener('error', () =>
-        reject(new Error('No se pudo cargar Google Maps')),
+        settle(() => reject(new Error('No se pudo cargar Google Maps'))),
       )
       return
     }
@@ -66,16 +103,16 @@ function loadMapsJs(apiKey: string): Promise<void> {
     const callbackName = '__syntergyAcMapsReady'
     window[callbackName] = () => {
       delete window[callbackName]
-      resolve()
+      settle(resolve)
     }
 
     const script = document.createElement('script')
     script.dataset.syntergyMaps = '1'
     script.async = true
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}&loading=async`
     script.onerror = () => {
       mapsLoadPromise = null
-      reject(new Error('No se pudo cargar Google Maps'))
+      settle(() => reject(new Error('No se pudo cargar Google Maps')))
     }
     document.head.appendChild(script)
   })

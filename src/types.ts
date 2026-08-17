@@ -18,14 +18,52 @@ export type Vehicle = {
   versions: VehicleVersion[]
 }
 
+// ---------------------------------------------------------------------------
+// Route enrichment (Lane B) — shared contract from
+// docs/superpowers/specs/2026-08-12-route-enrichment-abrp-design.md §4.
+// Additive: existing `preset`/`custom`/`google` routes keep working with
+// every enrichment field left undefined.
+// ---------------------------------------------------------------------------
+
+export type RouteSource = 'preset' | 'custom' | 'google' | 'abrp' | 'merged'
+
+/** Per-field provenance, so the UI can show "de dónde salió este número". */
+export type FieldSource =
+  | 'preset'
+  | 'google'
+  | 'abrp'
+  | 'derived'
+  | 'merged'
+  | 'manual'
+
+export type RouteEnrichmentFields = {
+  /** distanceKm / driveHours when a provider gives duration. */
+  avgTravelSpeedKmh?: number
+  /** Length-weighted average of posted speed limits along the route. */
+  avgSpeedLimitKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
+  /** Route-sourced $/kWh hint. Never overwrites the manual price by itself. */
+  suggestedPricePerKWh?: number
+}
+
+export type FieldSources = Partial<
+  Record<keyof RouteEnrichmentFields, FieldSource>
+>
+
 export type Route = {
   id: string
   from: string
   to: string
   distanceKm: number
-  source: 'preset' | 'custom' | 'google'
+  source: RouteSource
   driveHoursOneWay?: number
-}
+} & RouteEnrichmentFields & {
+    fieldSources?: FieldSources
+  }
+
+/** User's preferred route data source(s) — persisted like the Google key. */
+export type RouteSourcePreference = 'google' | 'abrp' | 'both'
 
 export type DriveStyle = 'eco' | 'normal' | 'aggressive'
 

@@ -111,18 +111,44 @@ function vehiclesByPowertrain(vehicles: AnyVehicle[]) {
   })).filter((group) => group.items.length > 0)
 }
 
-function renderResultCard(result: AnyTripResult, mode: TripMode, unitSystem: UnitSystem) {
+function renderResultCard(
+  result: AnyTripResult,
+  mode: TripMode,
+  unitSystem: UnitSystem,
+  route: Route,
+) {
+  const speedProps = {
+    avgSpeedLimitKmh: route.avgSpeedLimitKmh,
+    avgTravelSpeedKmh: route.avgTravelSpeedKmh,
+  }
   switch (result.vehicleType) {
     case 'BEV':
-      return <ResultCard result={result} mode={mode} unitSystem={unitSystem} />
+      return (
+        <ResultCard
+          result={result}
+          mode={mode}
+          unitSystem={unitSystem}
+          {...speedProps}
+        />
+      )
     case 'ICE':
     case 'HEV':
       return (
-        <FuelResultCard result={result} mode={mode} unitSystem={unitSystem} />
+        <FuelResultCard
+          result={result}
+          mode={mode}
+          unitSystem={unitSystem}
+          {...speedProps}
+        />
       )
     case 'PHEV':
       return (
-        <PhevResultCard result={result} mode={mode} unitSystem={unitSystem} />
+        <PhevResultCard
+          result={result}
+          mode={mode}
+          unitSystem={unitSystem}
+          {...speedProps}
+        />
       )
   }
 }
@@ -218,8 +244,8 @@ export function VehicleSlot({
         <p className="slot-hint">Selecciona una ruta para ver resultados.</p>
       ) : !vehicle || !version ? (
         <p className="slot-hint">Elige modelo y versión.</p>
-      ) : result ? (
-        renderResultCard(result, mode, unitSystem)
+      ) : result && route ? (
+        renderResultCard(result, mode, unitSystem, route)
       ) : null}
     </section>
   )
