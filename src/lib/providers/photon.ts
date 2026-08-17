@@ -14,7 +14,26 @@ type PhotonFeature = {
     city?: string
     state?: string
     country?: string
+    osm_value?: string
+    type?: string
   }
+}
+
+/** Photon only supports default/de/en/fr — `lang=es` returns HTTP 400. */
+const PHOTON_API = 'https://photon.komoot.io/api/'
+const PHOTON_REVERSE = 'https://photon.komoot.io/reverse'
+
+/** Bias toward Mexico so CDMX/Querétaro beat random homonyms. */
+const MX_BIAS = { lat: 23.6345, lon: -102.5528 }
+
+const PLACE_RANK: Record<string, number> = {
+  city: 0,
+  town: 1,
+  village: 2,
+  municipality: 2,
+  hamlet: 3,
+  state: 4,
+  county: 5,
 }
 
 function featureLabel(f: PhotonFeature): string {
@@ -22,6 +41,21 @@ function featureLabel(f: PhotonFeature): string {
   return [p.name ?? p.street, p.city, p.state, p.country]
     .filter((part): part is string => Boolean(part && part.trim()))
     .join(', ')
+}
+
+function placeRank(f: PhotonFeature): number {
+  const osm = f.properties?.osm_value ?? ''
+  const layer = f.properties?.type ?? ''
+  return Math.min(PLACE_RANK[osm] ?? 40, PLACE_RANK[layer] ?? 40)
+}
+
+function toSuggestion(f: PhotonFeature): PlaceSuggestion | null {
+  const coords = f.geometry?.coordinates
+  if (!coords || coords.length < 2) return null
+  const [lng, lat] = coords
+  const label = featureLabel(f)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !label) return null
+  return { label, latlng: { lat, lng } }
 }
 
 /**
@@ -34,7 +68,9 @@ export async function photonSuggest(
 ): Promise<PlaceSuggestion[]> {
   const q = query.trim()
   if (q.length < 2) return []
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=es&limit=${limit}`
+  const url =
+    `${PHOTON_API}?q=${encodeURIComponent(q)}&limit=${Math.max(limit, 8)}` +
+    `&lat=${MX_BIAS.lat}&lon=${MX_BIAS.lon}`
   const data = await enqueuePublicRequest(async () => {
     const response = await fetch(url)
     if (!response.ok) {
@@ -42,16 +78,19 @@ export async function photonSuggest(
     }
     return (await response.json()) as { features?: PhotonFeature[] }
   })
-  return (data.features ?? [])
-    .map((f) => {
-      const coords = f.geometry?.coordinates
-      if (!coords || coords.length < 2) return null
-      const [lng, lat] = coords
-      const label = featureLabel(f)
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !label) return null
-      return { label, latlng: { lat, lng } }
-    })
-    .filter((s): s is PlaceSuggestion => s != null)
+  const ranked = [...(data.features ?? [])].sort(
+    (a, b) => placeRank(a) - placeRank(b),
+  )
+  const seen = new Set<string>()
+  const hits: PlaceSuggestion[] = []
+  for (const f of ranked) {
+    const s = toSuggestion(f)
+    if (!s || seen.has(s.label)) continue
+    seen.add(s.label)
+    hits.push(s)
+    if (hits.length >= limit) break
+  }
+  return hits
 }
 
 export async function photonGeocode(query: string): Promise<LatLng> {
@@ -63,7 +102,7 @@ export async function photonGeocode(query: string): Promise<LatLng> {
 }
 
 export async function photonReverse(latlng: LatLng): Promise<string> {
-  const url = `https://photon.komoot.io/reverse?lat=${latlng.lat}&lon=${latlng.lng}&lang=es`
+  const url = `${PHOTON_REVERSE}?lat=${latlng.lat}&lon=${latlng.lng}`
   const data = await enqueuePublicRequest(async () => {
     const response = await fetch(url)
     if (!response.ok) {
