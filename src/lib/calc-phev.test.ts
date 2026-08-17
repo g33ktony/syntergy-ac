@@ -36,6 +36,51 @@ describe('calcPhevTrip', () => {
     expect(result.costMxn).toBeGreaterThan(0)
   })
 
+  it('applies drive-style to EV range and energy on electric-only trips', () => {
+    const version = ravFourPrime()
+    const base = {
+      distanceKm: 40,
+      version,
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay' as const,
+    }
+
+    const eco = calcPhevTrip({ ...base, driveStyle: 'eco' })
+    const normal = calcPhevTrip({ ...base, driveStyle: 'normal' })
+    const aggressive = calcPhevTrip({ ...base, driveStyle: 'aggressive' })
+
+    expect(eco.usedElectricOnly).toBe(true)
+    expect(normal.usedElectricOnly).toBe(true)
+    expect(aggressive.usedElectricOnly).toBe(true)
+    expect(eco.energyKWh).toBeCloseTo(normal.energyKWh * 0.9, 5)
+    expect(aggressive.energyKWh).toBeCloseTo(normal.energyKWh * 1.15, 5)
+    expect(eco.costMxn).toBeCloseTo(normal.costMxn * 0.9, 5)
+    expect(aggressive.costMxn).toBeCloseTo(normal.costMxn * 1.15, 5)
+  })
+
+  it('shrinks electric km and grows the fuel remainder as drive style gets more aggressive', () => {
+    const version = ravFourPrime()
+    const base = {
+      distanceKm: 150,
+      version,
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay' as const,
+    }
+
+    const eco = calcPhevTrip({ ...base, driveStyle: 'eco' })
+    const normal = calcPhevTrip({ ...base, driveStyle: 'normal' })
+    const aggressive = calcPhevTrip({ ...base, driveStyle: 'aggressive' })
+
+    expect(eco.electricKmUsed).toBeGreaterThan(normal.electricKmUsed)
+    expect(aggressive.electricKmUsed).toBeLessThan(normal.electricKmUsed)
+    expect(eco.fuelKmUsed).toBeLessThan(normal.fuelKmUsed)
+    expect(aggressive.fuelKmUsed).toBeGreaterThan(normal.fuelKmUsed)
+    expect(eco.electricKmUsed).toBeCloseTo(normal.electricKmUsed / 0.9, 5)
+    expect(aggressive.electricKmUsed).toBeCloseTo(normal.electricKmUsed / 1.15, 5)
+  })
+
   it('blends electric-first then fuel for the remainder past EV range', () => {
     const version = ravFourPrime()
     const result = calcPhevTrip({

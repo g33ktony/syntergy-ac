@@ -24,7 +24,10 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
     input
 
   const styleMult = DRIVE_STYLE_MULTIPLIERS[driveStyle]
-  const electricRangeEffective = version.electricRangeKmOfficial * FUEL_MX_FACTOR
+  // Drive style shrinks effective EV range (same direction as BEV
+  // consumption multipliers): aggressive uses the battery faster.
+  const electricRangeEffective =
+    (version.electricRangeKmOfficial * FUEL_MX_FACTOR) / styleMult
   const electricKmUsed = Math.min(distanceKm, electricRangeEffective)
   const fuelKmUsed = Math.max(0, distanceKm - electricRangeEffective)
 
