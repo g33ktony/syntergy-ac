@@ -44,8 +44,9 @@ function featureLabel(f: PhotonFeature): string {
 }
 
 function placeRank(f: PhotonFeature): number {
-  const value = f.properties?.osm_value ?? f.properties?.type ?? ''
-  return PLACE_RANK[value] ?? 40
+  const osm = f.properties?.osm_value ?? ''
+  const layer = f.properties?.type ?? ''
+  return Math.min(PLACE_RANK[osm] ?? 40, PLACE_RANK[layer] ?? 40)
 }
 
 function toSuggestion(f: PhotonFeature): PlaceSuggestion | null {

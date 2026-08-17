@@ -65,6 +65,39 @@ describe('photonSuggest', () => {
     const hits = await photonSuggest('CDMX')
     expect(hits[0]?.label).toContain('Ciudad de México')
   })
+
+  it('ranks Photon admin boundaries by type when osm_value is administrative', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          features: [
+            {
+              geometry: { coordinates: [-99.1, 19.4] },
+              properties: {
+                name: 'CDMX mural',
+                osm_value: 'artwork',
+                type: 'house',
+                country: 'México',
+              },
+            },
+            {
+              geometry: { coordinates: [-99.13, 19.43] },
+              properties: {
+                name: 'Ciudad de México',
+                osm_value: 'administrative',
+                type: 'state',
+                country: 'México',
+              },
+            },
+          ],
+        }),
+      ),
+    )
+
+    const hits = await photonSuggest('CDMX')
+    expect(hits[0]?.label).toContain('Ciudad de México')
+  })
 })
 
 describe('photon reverse/geocode URLs', () => {
