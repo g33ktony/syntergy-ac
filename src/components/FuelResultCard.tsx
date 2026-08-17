@@ -53,7 +53,7 @@ function Metrics({
           <dt>Combustible usado</dt>
           <dd>{formatTripUnits(result.litersUsed, 'volume', unitSystem)}</dd>
         </div>
-        <div>
+        <div className="metric-total">
           <dt>Costo</dt>
           <dd>{formatMxn(result.costMxn)}</dd>
         </div>

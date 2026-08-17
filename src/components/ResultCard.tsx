@@ -64,7 +64,7 @@ function Metrics({
           <dt>Energía</dt>
           <dd>{formatTripUnits(result.energyKWh, 'energy', unitSystem)}</dd>
         </div>
-        <div>
+        <div className="metric-total">
           <dt>Costo</dt>
           <dd>{formatMxn(result.costMxn)}</dd>
         </div>
