@@ -109,7 +109,7 @@ function loadMapsJs(apiKey: string): Promise<void> {
     const script = document.createElement('script')
     script.dataset.syntergyMaps = '1'
     script.async = true
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=${callbackName}&loading=async`
     script.onerror = () => {
       mapsLoadPromise = null
       settle(() => reject(new Error('No se pudo cargar Google Maps')))
