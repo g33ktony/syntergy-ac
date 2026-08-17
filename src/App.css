@@ -1,87 +1,98 @@
 .app {
-  --ink: #1a1f24;
-  --muted: #4a5560;
-  --line: rgba(26, 31, 36, 0.12);
-  --accent: #0e6b6b;
-  --accent-soft: #d7ecec;
-  --surface: rgba(255, 255, 255, 0.72);
-  --danger: #9b2c2c;
-  --ok: #1b6b3a;
+  --danger: var(--accent);
 
-  max-width: 72rem;
+  max-width: 74rem;
   margin: 0 auto;
-  padding: 2.25rem 1.25rem 4rem;
+  padding: 2.5rem 1.25rem 4rem;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Masthead                                                               */
+/* ---------------------------------------------------------------------- */
+
 .app-header {
-  margin-bottom: 2rem;
+  margin-bottom: 2.25rem;
 }
 
 .app-header h1 {
   margin: 0;
-  font-family: 'Outfit', 'Segoe UI', sans-serif;
-  font-size: clamp(2.4rem, 7vw, 3.5rem);
-  letter-spacing: -0.04em;
+  font-family: var(--font-mono);
+  font-size: clamp(2rem, 6vw, 3.1rem);
+  letter-spacing: -0.02em;
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .tagline {
-  margin: 0.65rem 0 0;
-  color: var(--muted);
+  margin: 0.75rem 0 0;
+  color: var(--ink-muted);
   max-width: 34rem;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Shared "keyed-in" form language: underline fields, small-caps labels   */
+/* ---------------------------------------------------------------------- */
+
 .settings-panel {
-  margin-top: 1rem;
+  margin-top: 1.25rem;
 }
 
 .settings-toggle {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .settings-body {
-  margin-top: 0.85rem;
-  padding: 1rem 0 0;
-  border-top: 1px solid var(--line);
-  max-width: 28rem;
+  margin-top: 1rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  max-width: 30rem;
+  box-shadow:
+    0 1px 2px rgba(28, 26, 22, 0.05),
+    0 10px 24px -12px rgba(28, 26, 22, 0.22);
 }
 
 .settings-body h2,
 .trip-controls h2,
 .route-manager h2 {
-  margin: 0 0 0.35rem;
-  font-family: 'Outfit', 'Segoe UI', sans-serif;
-  font-size: 1.15rem;
-  font-weight: 600;
+  margin: 0 0 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .section-lead {
-  margin: 0 0 1rem;
-  color: var(--muted);
-  font-size: 0.92rem;
+  margin: 0 0 1.1rem;
+  color: var(--ink-muted);
+  font-size: 0.88rem;
 }
 
 .trip-controls,
 .route-manager {
-  margin-top: 1.75rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--line);
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 1px dashed var(--line-strong);
 }
 
 .controls-grid {
   display: grid;
-  gap: 1rem 1.25rem;
+  gap: 1.15rem 1.5rem;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   align-items: end;
 }
 
 .field {
   display: grid;
-  gap: 0.35rem;
-  font-size: 0.9rem;
-  color: var(--muted);
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
 }
 
 .field-wide {
@@ -89,27 +100,50 @@
 }
 
 .field span {
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .field input,
 .field select,
 .settings-form input {
   font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
   color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
-  padding: 0.55rem 0.7rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: 0;
+  padding: 0.4rem 0.1rem;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.field select {
+  text-overflow: ellipsis;
 }
 
 .field input:focus,
 .field select:focus,
 .settings-form input:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, white);
-  outline-offset: 1px;
+  outline: none;
+  border-bottom-color: var(--accent);
+  box-shadow: 0 1px 0 0 var(--accent);
 }
+
+.field input[type='number'],
+.field input[type='password'] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Segmented controls — read as a two/three-way ticket stamp              */
+/* ---------------------------------------------------------------------- */
 
 .mode-toggle {
   border: 0;
@@ -119,39 +153,56 @@
 }
 
 .mode-toggle legend {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--muted);
-  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 0.4rem;
   padding: 0;
 }
 
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  gap: 0;
+  border: 1px solid var(--line-strong);
 }
 
-.segmented button {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: 0.4rem;
-  padding: 0.55rem 0.75rem;
+.segmented button,
+.segmented .seg {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  background: transparent;
+  padding: 0.55rem 0.6rem;
   cursor: pointer;
   color: var(--ink);
 }
 
-.segmented button.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+.segmented button:last-child,
+.segmented .seg:last-child {
+  border-right: 0;
+}
+
+.segmented button.active,
+.segmented .seg.active {
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .slider-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--muted);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
 }
 
 .field input[type='range'] {
@@ -160,6 +211,10 @@
   background: transparent;
   border: 0;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Buttons — punched, not rounded                                        */
+/* ---------------------------------------------------------------------- */
 
 .btn-primary,
 .btn-secondary,
@@ -170,76 +225,120 @@
 
 .btn-primary,
 .btn-secondary {
-  border-radius: 0.4rem;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid transparent;
+  position: relative;
+  isolation: isolate;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 0;
+  padding: 0.6rem 1rem;
+  border: 0;
+  background: transparent;
+}
+
+/* Punch the fill/border, not the button — clip-path would hide :focus-visible. */
+.btn-primary::before,
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid var(--ink);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 0.5rem) 0,
+    100% 0.5rem,
+    100% 100%,
+    0.5rem 100%,
+    0 calc(100% - 0.5rem)
+  );
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  color: var(--paper);
+}
+
+.btn-primary::before {
+  background: var(--ink);
 }
 
 .btn-secondary {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 25%, white);
+  color: var(--ink);
+}
+
+.btn-primary:hover::before,
+.btn-secondary:hover::before {
+  opacity: 0.9;
 }
 
 .btn-text {
   background: none;
   border: 0;
   color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
   padding: 0.25rem 0;
   text-decoration: underline;
-  text-underline-offset: 0.15em;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.2em;
 }
 
 .btn-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
-  margin-top: 0.75rem;
+  margin-top: 0.9rem;
 }
 
 .route-form {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.9rem;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   align-items: end;
 }
 
 .google-form {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px dashed var(--line);
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--line-strong);
 }
 
 .google-form h3 {
-  margin: 0 0 0.35rem;
-  font-size: 1rem;
-  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .form-error {
   color: var(--danger);
-  margin: 0.75rem 0 0;
-  font-size: 0.9rem;
+  margin: 0.85rem 0 0;
+  font-size: 0.88rem;
 }
 
 .form-hint {
-  margin: 0.75rem 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+  margin: 0.85rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+.suggested-price {
+  padding: 0.6rem 0.75rem;
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
 }
 
 .custom-route-list {
   list-style: none;
-  margin: 1rem 0 0;
+  margin: 1.1rem 0 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: 0;
 }
 
 .custom-route-list li {
@@ -247,15 +346,20 @@
   justify-content: space-between;
   gap: 1rem;
   align-items: baseline;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.95rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dotted var(--line-strong);
+  font-size: 0.92rem;
+  font-family: var(--font-mono);
 }
 
+/* ---------------------------------------------------------------------- */
+/* The tickets — one printed slip per vehicle                            */
+/* ---------------------------------------------------------------------- */
+
 .slots {
-  margin-top: 2.25rem;
+  margin-top: 2.75rem;
   display: grid;
-  gap: 1.25rem;
+  gap: 1.75rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -266,81 +370,180 @@
 }
 
 .vehicle-slot {
-  padding: 1rem 0 0;
-  border-top: 1px solid var(--line);
+  position: relative;
+  min-width: 0;
+  background: var(--paper);
+  padding: 1.4rem 1.4rem 1.65rem;
   display: grid;
-  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.1rem;
   align-content: start;
+  box-shadow:
+    0 1px 2px rgba(28, 26, 22, 0.06),
+    0 16px 32px -16px rgba(28, 26, 22, 0.3);
+}
+
+.vehicle-slot::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 16px;
+  background-image: radial-gradient(
+    circle at 8px 0,
+    transparent 7px,
+    var(--paper-deep) 7.5px
+  );
+  background-size: 16px 16px;
+  background-repeat: repeat-x;
 }
 
 .slot-header {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px dashed var(--line-strong);
 }
 
 .slot-index {
-  font-family: 'Outfit', 'Segoe UI', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
 }
 
 .slot-hint {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+  color: var(--ink-muted);
+  font-size: 0.88rem;
 }
 
 .powertrain-badge {
-  font-family: 'Outfit', 'Segoe UI', sans-serif;
-  font-size: 0.7rem;
-  font-weight: 600;
+  display: inline-block;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--muted);
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  white-space: normal;
+  line-height: 1.25;
 }
+
+.powertrain-badge--bev {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: var(--paper);
+}
+
+.powertrain-badge--phev {
+  background: transparent;
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.powertrain-badge--hev {
+  background: transparent;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.powertrain-badge--ice {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Ticket line items — dotted leaders, tabular figures                    */
+/* ---------------------------------------------------------------------- */
 
 .result-card {
   display: grid;
-  gap: 1rem;
-  margin-top: 0.25rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.1rem;
 }
 
 .metrics-label {
-  margin: 0 0 0.4rem;
-  font-size: 0.8rem;
+  margin: 0 0 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
 }
 
 .metrics dl {
   margin: 0;
   display: grid;
-  gap: 0.45rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
 }
 
 .metrics dl > div {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, max-content) minmax(0.75rem, 1fr) minmax(0, 1fr);
+  min-width: 0;
+  column-gap: 0.5rem;
   align-items: baseline;
-  font-size: 0.92rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
 }
 
 .metrics dt {
-  color: var(--muted);
+  grid-column: 1;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metrics dl > div::after {
+  content: '';
+  grid-column: 2;
+  align-self: end;
+  margin-bottom: 0.2em;
+  border-bottom: 1px dotted var(--line-strong);
 }
 
 .metrics dd {
+  grid-column: 3;
+  min-width: 0;
   margin: 0;
+  font-family: var(--font-mono);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Cost row reads as the ticket total: the number the whole world raises. */
+.metrics dl > div.metric-total {
+  margin-top: 0.15rem;
+  padding-top: 0.65rem;
+  border-top: 3px double var(--ink);
+}
+
+.metrics dl > div.metric-total dt {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.metrics dl > div.metric-total dd {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
 }
 
 .soc-ok {
@@ -352,12 +555,17 @@
 }
 
 .footnote {
-  margin: 2.5rem 0 0;
+  margin: 3rem 0 0;
   max-width: 40rem;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
 }
 
 code {
-  font-size: 0.9em;
+  font-size: 0.92em;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.05em 0.35em;
 }

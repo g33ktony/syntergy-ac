@@ -71,10 +71,6 @@ function Metrics({
           </dd>
         </div>
         <div>
-          <dt>Costo</dt>
-          <dd>{formatMxn(result.costMxn)}</dd>
-        </div>
-        <div>
           <dt>% tanque al llegar</dt>
           <dd className={result.reachesWithoutStop ? 'soc-ok' : 'soc-low'}>
             {formatLocaleNumber(Math.max(result.arrivalFuelPercent, 0), 0)}%
@@ -94,6 +90,10 @@ function Metrics({
               ? 'Solo eléctrico'
               : `Eléctrico + ${fuelWord}`}
           </dd>
+        </div>
+        <div className="metric-total">
+          <dt>Costo</dt>
+          <dd>{formatMxn(result.costMxn)}</dd>
         </div>
       </dl>
     </div>

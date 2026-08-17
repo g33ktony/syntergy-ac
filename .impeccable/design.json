@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-17T00:00:00Z",
+  "title": "Design System: Syntergy AC",
+  "extensions": {
+    "colorMeta": {
+      "acento-rojo-ticket": {
+        "role": "primary",
+        "displayName": "Rojo-ticket",
+        "canonical": "#a93420",
+        "tonalRamp": ["#2e0e07", "#4a170d", "#661f13", "#83281a", "#a93420", "#c15b48", "#d68c7c", "#efd2ca"]
+      },
+      "mostrador": {
+        "role": "neutral",
+        "displayName": "Mostrador",
+        "canonical": "#ece4d1",
+        "tonalRamp": ["#1c1a16", "#3a352a", "#59503e", "#8a7d61", "#bcae8b", "#d8cdb3", "#ece4d1", "#f8f4ea"]
+      },
+      "papel-ticket": {
+        "role": "neutral",
+        "displayName": "Papel de ticket",
+        "canonical": "#fbf8f1",
+        "tonalRamp": ["#1c1a16", "#3a352a", "#59503e", "#8a7d61", "#c9beA0", "#e6dfc9", "#fbf8f1", "#fefdfa"]
+      },
+      "verde-factible": {
+        "role": "secondary",
+        "displayName": "Verde de factibilidad",
+        "canonical": "#3f6b4f",
+        "tonalRamp": ["#0f1c13", "#1c331f", "#284a2d", "#33613c", "#3f6b4f", "#5d8c6e", "#8bb098", "#c4dccb"]
+      }
+    },
+    "typographyMeta": {
+      "masthead": { "displayName": "Masthead", "purpose": "Título SYNTERGY AC, único uso a esta escala." },
+      "label": { "displayName": "Label", "purpose": "Etiquetas de campo, headers de sección, legends." },
+      "data": { "displayName": "Data", "purpose": "Valores de línea de ticket (distancia, tiempo, energía)." },
+      "total": { "displayName": "Total", "purpose": "Costo — la cifra monumental de cada tarjeta." },
+      "body": { "displayName": "Body", "purpose": "Prosa explicativa: tagline, section-lead, hints." }
+    },
+    "shadows": [
+      { "name": "ticket-lift", "value": "0 1px 2px rgba(28,26,22,0.06), 0 16px 32px -16px rgba(28,26,22,0.3)", "purpose": "Separa cada tarjeta-ticket del mostrador. Offset y blur reales, nunca un halo de color a offset cero." }
+    ],
+    "motion": [],
+    "breakpoints": [
+      { "name": "stack", "value": "900px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Botón de acción principal (Guardar clave, Guardar ruta). Esquinas cortadas, no radius.",
+      "html": "<button class=\"ds-btn-primary\">GUARDAR RUTA</button>",
+      "css": ".ds-btn-primary { position: relative; isolation: isolate; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; background: transparent; color: #fbf8f1; border: 0; padding: 0.6rem 1rem; cursor: pointer; } .ds-btn-primary::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: #1c1a16; border: 1px solid #1c1a16; clip-path: polygon(0 0, calc(100% - 0.5rem) 0, 100% 0.5rem, 100% 100%, 0.5rem 100%, 0 calc(100% - 0.5rem)); } .ds-btn-primary:hover::before { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid #a93420; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ticket Card",
+      "kind": "card",
+      "refersTo": null,
+      "description": "Tarjeta de resultado por vehículo: papel de ticket sobre mostrador, con perforación radial en el borde superior.",
+      "html": "<article class=\"ds-ticket\"><header class=\"ds-ticket-head\">VEHÍCULO 1</header><dl class=\"ds-ticket-row\"><dt>Distancia</dt><dd>220 km</dd></dl><dl class=\"ds-ticket-total\"><dt>Costo</dt><dd>$35.2 MXN</dd></dl></article>",
+      "css": ".ds-ticket { position: relative; background: #fbf8f1; padding: 1.4rem 1.4rem 1.65rem; box-shadow: 0 1px 2px rgba(28,26,22,0.06), 0 16px 32px -16px rgba(28,26,22,0.3); font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; } .ds-ticket::after { content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 16px; background-image: radial-gradient(circle at 8px 0, transparent 7px, #ece4d1 7.5px); background-size: 16px 16px; background-repeat: repeat-x; } .ds-ticket-head { font-weight: 700; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: #6b6152; padding-bottom: 0.85rem; border-bottom: 1px dashed rgba(28,26,22,0.32); margin-bottom: 1rem; } .ds-ticket-row { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.5rem; } .ds-ticket-total { display: flex; justify-content: space-between; padding-top: 0.65rem; border-top: 3px double #1c1a16; font-size: 1.5rem; font-weight: 700; color: #a93420; }"
+    },
+    {
+      "name": "Underline Input",
+      "kind": "input",
+      "refersTo": null,
+      "description": "Campo de texto/número/select sin caja — solo línea inferior, como un formulario impreso.",
+      "html": "<label class=\"ds-field\"><span>$ / kWh (MXN)</span><input type=\"number\" value=\"2\" /></label>",
+      "css": ".ds-field { display: grid; gap: 0.3rem; font-size: 0.88rem; color: #6b6152; } .ds-field span { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; } .ds-field input { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.95rem; color: #1c1a16; background: transparent; border: 0; border-bottom: 1px solid rgba(28,26,22,0.32); padding: 0.4rem 0.1rem; width: 100%; } .ds-field input:focus { outline: none; border-bottom-color: #a93420; box-shadow: 0 1px 0 0 #a93420; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El Ticket de Gasolina",
+    "overview": "Syntergy AC se imprime como el ticket que cualquier persona en México ya conoce del despachador de gasolina: papel claro, tinta oscura, líneas de datos con separador punteado, y un total que domina la tarjeta al final. No es un dashboard SaaS de comparación EV — se rechazó deliberadamente el fondo oscuro con acentos neón verde/azul y las tarjetas con sombra/glass que domina esa categoría. Cada vehículo comparado es un ticket físico independiente, apoyado sobre un mostrador, con un borde perforado real en la parte superior — no una sombra decorativa. La honestidad del ticket es la promesa central del producto: comparar el costo real de un viaje, no la cifra optimista del fabricante.",
+    "keyCharacteristics": [
+      "Papel claro, tinta oscura — nunca modo oscuro",
+      "Tipografía monoespaciada de sistema para todo dato/cifra/etiqueta; sans de sistema solo para prosa",
+      "Un acento rojo-ticket, usado con moderación",
+      "Sin bordes redondeados en ningún componente",
+      "Botones con esquina cortada, no rectángulos SaaS ni pills"
+    ],
+    "rules": [
+      { "name": "The One Ink Rule", "body": "El acento rojo-ticket es la única nota de color saturado del sistema. El verde de factibilidad es semántico, nunca decorativo.", "section": "colors" },
+      { "name": "The Register Rule", "body": "Cualquier valor que un despachador de gasolina imprimiría en un ticket va en mono. Cualquier cosa que un humano escribiría a mano va en sans.", "section": "typography" },
+      { "name": "The No Dark Mode Rule", "body": "El ticket de gasolina siempre es de papel claro. No hay variante oscura de este sistema.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar mono de sistema para toda cifra, unidad o etiqueta de control",
+      "Do mantener el total de costo como la cifra visualmente dominante de cada tarjeta",
+      "Do declarar grid-template-columns: minmax(0, 1fr) explícito en cualquier grid de una sola columna anidado",
+      "Do verificar contraste real contra ambos fondos de papel antes de fijar un valor de acento"
+    ],
+    "donts": [
+      "Don't usar modo oscuro en ninguna superficie de este sistema",
+      "Don't agregar esquinas redondeadas, sombras de glass, o gradientes decorativos",
+      "Don't introducir un segundo color de acento saturado",
+      "Don't usar border-left/border-right de color como acento decorativo en tarjetas o alertas"
+    ]
+  }
+}
