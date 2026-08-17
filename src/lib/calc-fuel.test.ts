@@ -28,6 +28,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     const expectedLiters = (120 * (7.5 * FUEL_MX_FACTOR * 1.0)) / 100
@@ -52,6 +53,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       version,
       pricePerLiter: 24,
       mode: 'oneWay' as const,
+      averageSpeedKmh: 90,
     }
 
     const eco = calcFuelTrip({ ...base, driveStyle: 'eco' })
@@ -70,6 +72,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
 
     expect(result.oneWay).toBeDefined()
@@ -92,6 +95,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
       driveHoursOneWay: gdlCdmx.driveHoursOneWay,
     })
     const roundTrip = calcFuelTrip({
@@ -100,6 +104,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
       driveHoursOneWay: gdlCdmx.driveHoursOneWay,
     })
 
@@ -119,6 +124,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
 
     expect(result.oneWay).toBeDefined()
@@ -139,6 +145,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'aggressive',
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     expect(result.reachesWithoutStop).toBe(false)
@@ -153,6 +160,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
     const climbing = calcFuelTrip({
       distanceKm: 100,
@@ -160,6 +168,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
       elevationGainM: 800,
     })
 
@@ -174,6 +183,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
     const downhillOneWay = calcFuelTrip({
       distanceKm: 100,
@@ -181,6 +191,7 @@ describe('calcFuelTrip ICE/HEV', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
       elevationGainM: 0,
       elevationLossM: 500,
     })

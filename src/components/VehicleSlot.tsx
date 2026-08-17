@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
-import { RESERVE_PERCENT } from '../lib/constants'
+import { DEFAULT_HIGHWAY_KMH, RESERVE_PERCENT } from '../lib/constants'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
 import { tollCostForTripMode } from '../lib/tolls'
 import type {
@@ -33,6 +33,7 @@ type VehicleSlotProps = {
   pricePerKWh: number
   pricePerLiter: number
   unitSystem: UnitSystem
+  averageSpeedKmh?: number
 }
 
 /** `AnyVersion`'s variants aren't tagged; distinguish by their unique fields. */
@@ -55,6 +56,7 @@ function calcResultForVehicle(
   pricePerKWh: number,
   pricePerLiter: number,
   phevRechargeAtDestination: boolean,
+  averageSpeedKmh: number,
 ): AnyTripResult | null {
   switch (vehicle.type) {
     case 'BEV': {
@@ -76,6 +78,7 @@ function calcResultForVehicle(
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
         tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
+        averageSpeedKmh,
       })
     }
     case 'ICE':
@@ -97,6 +100,7 @@ function calcResultForVehicle(
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
         tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
+        averageSpeedKmh,
       })
     }
     case 'PHEV': {
@@ -118,6 +122,7 @@ function calcResultForVehicle(
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
         tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
+        averageSpeedKmh,
         rechargeAtDestination: phevRechargeAtDestination,
       })
     }
@@ -193,6 +198,7 @@ export function VehicleSlot({
   pricePerKWh,
   pricePerLiter,
   unitSystem,
+  averageSpeedKmh = DEFAULT_HIGHWAY_KMH,
 }: VehicleSlotProps) {
   const [phevRecharge, setPhevRecharge] = useState(false)
 
@@ -212,6 +218,7 @@ export function VehicleSlot({
           pricePerKWh,
           pricePerLiter,
           phevRecharge,
+          averageSpeedKmh,
         )
       : null
 
