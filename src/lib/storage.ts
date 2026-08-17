@@ -1,8 +1,10 @@
-import type { Route, UnitSystem } from '../types'
+import type { Route, RouteSourcePreference, UnitSystem } from '../types'
 
 const CUSTOM_ROUTES_KEY = 'syntergy-ac:custom-routes'
 const API_KEY_KEY = 'syntergy-ac:google-api-key'
 const UNIT_SYSTEM_KEY = 'syntergy-ac:unit-system'
+const ABRP_API_KEY_KEY = 'syntergy-ac:abrp-api-key'
+const ROUTE_SOURCE_PREFERENCE_KEY = 'syntergy-ac:route-source-preference'
 
 function canUseStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -86,6 +88,41 @@ export function saveUnitSystem(unitSystem: UnitSystem): void {
   localStorage.setItem(UNIT_SYSTEM_KEY, unitSystem)
 }
 
+/** Same pattern as the Google key: UI override, never committed. */
+export function loadStoredAbrpApiKey(): string | null {
+  if (!canUseStorage()) return null
+  const value = localStorage.getItem(ABRP_API_KEY_KEY)
+  if (value == null) return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+export function saveStoredAbrpApiKey(key: string): void {
+  if (!canUseStorage()) return
+  const trimmed = key.trim()
+  if (trimmed.length === 0) {
+    localStorage.removeItem(ABRP_API_KEY_KEY)
+    return
+  }
+  localStorage.setItem(ABRP_API_KEY_KEY, trimmed)
+}
+
+export function clearStoredAbrpApiKey(): void {
+  if (!canUseStorage()) return
+  localStorage.removeItem(ABRP_API_KEY_KEY)
+}
+
+export function loadRouteSourcePreference(): RouteSourcePreference {
+  if (!canUseStorage()) return 'google'
+  const value = localStorage.getItem(ROUTE_SOURCE_PREFERENCE_KEY)
+  return value === 'abrp' || value === 'both' ? value : 'google'
+}
+
+export function saveRouteSourcePreference(pref: RouteSourcePreference): void {
+  if (!canUseStorage()) return
+  localStorage.setItem(ROUTE_SOURCE_PREFERENCE_KEY, pref)
+}
+
 function isRoute(value: unknown): value is Route {
   if (!value || typeof value !== 'object') return false
   const r = value as Record<string, unknown>
@@ -94,6 +131,10 @@ function isRoute(value: unknown): value is Route {
     typeof r.from === 'string' &&
     typeof r.to === 'string' &&
     typeof r.distanceKm === 'number' &&
-    (r.source === 'preset' || r.source === 'custom' || r.source === 'google')
+    (r.source === 'preset' ||
+      r.source === 'custom' ||
+      r.source === 'google' ||
+      r.source === 'abrp' ||
+      r.source === 'merged')
   )
 }

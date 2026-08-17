@@ -6,6 +6,8 @@ type PhevResultCardProps = {
   result: PhevTripResult
   mode: TripMode
   unitSystem: UnitSystem
+  avgSpeedLimitKmh?: number
+  avgTravelSpeedKmh?: number
 }
 
 function roundTripLabel(rechargeAtDestination: boolean): string {
@@ -18,13 +20,22 @@ function Metrics({
   result,
   label,
   unitSystem,
+  avgSpeedLimitKmh,
+  avgTravelSpeedKmh,
 }: {
   result: PhevTripResultBase
   label?: string
   unitSystem: UnitSystem
+  avgSpeedLimitKmh?: number
+  avgTravelSpeedKmh?: number
 }) {
   const speed = formatAvgSpeedRow(
-    { distanceKm: result.distanceKm, driveHours: result.driveHours },
+    {
+      distanceKm: result.distanceKm,
+      driveHours: result.driveHours,
+      avgSpeedLimitKmh,
+      avgTravelSpeedKmh,
+    },
     unitSystem,
   )
   const fuelWord = fuelTypeLabel(result.fuel).toLowerCase()
@@ -89,15 +100,29 @@ function Metrics({
   )
 }
 
-export function PhevResultCard({ result, mode, unitSystem }: PhevResultCardProps) {
+export function PhevResultCard({
+  result,
+  mode,
+  unitSystem,
+  avgSpeedLimitKmh,
+  avgTravelSpeedKmh,
+}: PhevResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
     return (
       <article className="result-card">
-        <Metrics result={result.oneWay} label="Ida" unitSystem={unitSystem} />
+        <Metrics
+          result={result.oneWay}
+          label="Ida"
+          unitSystem={unitSystem}
+          avgSpeedLimitKmh={avgSpeedLimitKmh}
+          avgTravelSpeedKmh={avgTravelSpeedKmh}
+        />
         <Metrics
           result={result}
           label={roundTripLabel(result.rechargeAtDestination)}
           unitSystem={unitSystem}
+          avgSpeedLimitKmh={avgSpeedLimitKmh}
+          avgTravelSpeedKmh={avgTravelSpeedKmh}
         />
       </article>
     )
@@ -105,7 +130,12 @@ export function PhevResultCard({ result, mode, unitSystem }: PhevResultCardProps
 
   return (
     <article className="result-card">
-      <Metrics result={result} unitSystem={unitSystem} />
+      <Metrics
+        result={result}
+        unitSystem={unitSystem}
+        avgSpeedLimitKmh={avgSpeedLimitKmh}
+        avgTravelSpeedKmh={avgTravelSpeedKmh}
+      />
     </article>
   )
 }

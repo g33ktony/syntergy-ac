@@ -9,8 +9,18 @@ import {
 import { presetRoutes } from './data/routes'
 import { getAllMultiFuelVehicles } from './data/vehicles-multifuel'
 import { DEFAULT_PRICE_PER_KWH, DEFAULT_PRICE_PER_LITER } from './lib/constants'
-import { loadCustomRoutes, loadUnitSystem } from './lib/storage'
-import type { DriveStyle, Route, TripMode, UnitSystem } from './types'
+import {
+  loadCustomRoutes,
+  loadRouteSourcePreference,
+  loadUnitSystem,
+} from './lib/storage'
+import type {
+  DriveStyle,
+  Route,
+  RouteSourcePreference,
+  TripMode,
+  UnitSystem,
+} from './types'
 import './App.css'
 
 const EMPTY_SLOT: SlotSelection = { vehicleId: '', versionId: '' }
@@ -37,6 +47,8 @@ function App() {
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(() =>
     loadUnitSystem(),
   )
+  const [routeSourcePreference, setRouteSourcePreference] =
+    useState<RouteSourcePreference>(() => loadRouteSourcePreference())
 
   const allRoutes = useMemo(
     () => [...presetRoutes, ...customRoutes, ...googleRoutes],
@@ -81,6 +93,8 @@ function App() {
           onApiKeyChange={() => setApiKeyEpoch((n) => n + 1)}
           unitSystem={unitSystem}
           onUnitSystemChange={setUnitSystem}
+          routeSourcePreference={routeSourcePreference}
+          onRouteSourcePreferenceChange={setRouteSourcePreference}
         />
       </header>
 
@@ -98,6 +112,9 @@ function App() {
         pricePerLiter={pricePerLiter}
         onPricePerLiterChange={setPricePerLiter}
         apiKeyEpoch={apiKeyEpoch}
+        routeSourcePreference={routeSourcePreference}
+        unitSystem={unitSystem}
+        onApplySuggestedPrice={setPricePerKWh}
       />
 
       <RouteManager

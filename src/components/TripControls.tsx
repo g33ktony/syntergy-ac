@@ -1,8 +1,19 @@
 import { useState, type FormEvent } from 'react'
 import { routeLabel } from '../data/routes'
-import { hasGoogleApiKey, getGoogleApiKey } from '../lib/config'
-import { fetchRouteDistance, makeGoogleRoute } from '../lib/google'
-import type { DriveStyle, Route, TripMode } from '../types'
+import { getAbrpApiKey, getGoogleApiKey, hasAbrpApiKey, hasGoogleApiKey } from '../lib/config'
+import { createAbrpProvider } from '../lib/providers/abrp'
+import { createGoogleProvider } from '../lib/providers/google'
+import { lookupRoute } from '../lib/providers/merge'
+import type { RouteProvider } from '../lib/providers/types'
+import { enrichmentToRoute } from '../lib/route-enrichment'
+import { formatTripUnits } from '../lib/units'
+import type {
+  DriveStyle,
+  Route,
+  RouteSourcePreference,
+  TripMode,
+  UnitSystem,
+} from '../types'
 
 const DRIVE_STYLE_OPTIONS: { value: DriveStyle; label: string }[] = [
   { value: 'eco', label: 'Económico' },
@@ -24,6 +35,15 @@ type TripControlsProps = {
   pricePerLiter: number
   onPricePerLiterChange: (price: number) => void
   apiKeyEpoch: number
+  routeSourcePreference: RouteSourcePreference
+  unitSystem: UnitSystem
+  onApplySuggestedPrice: (price: number) => void
+}
+
+const ROUTE_SOURCE_LABEL: Record<RouteSourcePreference, string> = {
+  google: 'Google',
+  abrp: 'ABRP',
+  both: 'Google + ABRP',
 }
 
 export function TripControls({
@@ -40,39 +60,57 @@ export function TripControls({
   pricePerLiter,
   onPricePerLiterChange,
   apiKeyEpoch,
+  routeSourcePreference,
+  unitSystem,
+  onApplySuggestedPrice,
 }: TripControlsProps) {
   void apiKeyEpoch
   const showGoogle = hasGoogleApiKey()
+  const showAbrp = hasAbrpApiKey()
+  const showLookup = showGoogle || showAbrp
   const styleIndex = DRIVE_STYLE_OPTIONS.findIndex((o) => o.value === driveStyle)
 
   const [gFrom, setGFrom] = useState('')
   const [gTo, setGTo] = useState('')
   const [gBusy, setGBusy] = useState(false)
   const [gError, setGError] = useState<string | null>(null)
+  const [lastRoute, setLastRoute] = useState<Route | null>(null)
 
-  async function handleGoogleLookup(e: FormEvent) {
+  function activeProviders(): RouteProvider[] {
+    const providers: RouteProvider[] = []
+    const wantsGoogle =
+      routeSourcePreference === 'google' || routeSourcePreference === 'both'
+    const wantsAbrp =
+      routeSourcePreference === 'abrp' || routeSourcePreference === 'both'
+
+    const googleKey = getGoogleApiKey()
+    if (wantsGoogle && googleKey) providers.push(createGoogleProvider(googleKey))
+
+    const abrpKey = getAbrpApiKey()
+    if (wantsAbrp && abrpKey) providers.push(createAbrpProvider(abrpKey))
+
+    return providers
+  }
+
+  async function handleRouteLookup(e: FormEvent) {
     e.preventDefault()
     setGError(null)
-    const key = getGoogleApiKey()
-    if (!key) {
-      setGError('No hay API key configurada.')
+    const providers = activeProviders()
+    if (providers.length === 0) {
+      setGError('No hay API key configurada para la fuente elegida.')
       return
     }
     setGBusy(true)
     try {
-      const result = await fetchRouteDistance(gFrom, gTo, key)
-      const route = makeGoogleRoute(
-        gFrom,
-        gTo,
-        result.distanceKm,
-        result.driveHoursOneWay,
-      )
+      const merged = await lookupRoute(providers, gFrom, gTo)
+      const route = enrichmentToRoute(gFrom, gTo, merged)
+      setLastRoute(route)
       onGoogleRoute(route)
     } catch (err) {
       setGError(
         err instanceof Error
           ? err.message
-          : 'Error al consultar Google. Usa km manual.',
+          : 'Error al consultar la ruta. Usa km manual.',
       )
     } finally {
       setGBusy(false)
@@ -179,11 +217,11 @@ export function TripControls({
         </label>
       </div>
 
-      {showGoogle ? (
-        <form className="google-form" onSubmit={handleGoogleLookup}>
-          <h3>Distancia con Google</h3>
+      {showLookup ? (
+        <form className="google-form" onSubmit={handleRouteLookup}>
+          <h3>Distancia con {ROUTE_SOURCE_LABEL[routeSourcePreference]}</h3>
           <p className="section-lead">
-            Consulta Distance Matrix si tienes API key.
+            Consulta la ruta con la fuente elegida en Ajustes.
           </p>
           <div className="route-form">
             <label className="field">
@@ -215,6 +253,34 @@ export function TripControls({
           {gError ? (
             <p className="form-error" role="alert">
               {gError}
+            </p>
+          ) : null}
+
+          {lastRoute?.elevationGainM != null || lastRoute?.elevationLossM != null ? (
+            <p className="form-hint">
+              Elevación (ida): +
+              {formatTripUnits(lastRoute.elevationGainM ?? 0, 'elevation', unitSystem, 0)}
+              {' / -'}
+              {formatTripUnits(lastRoute.elevationLossM ?? 0, 'elevation', unitSystem, 0)}
+              {' · fuente '}
+              {lastRoute.fieldSources?.elevationGainM ?? 'abrp'}
+            </p>
+          ) : null}
+
+          {lastRoute?.suggestedPricePerKWh != null ? (
+            <p className="form-hint suggested-price">
+              Precio sugerido en ruta (ABRP): $
+              {lastRoute.suggestedPricePerKWh.toFixed(2)} MXN/kWh — dato poco
+              fiable en México, revísalo antes de usarlo.{' '}
+              <button
+                type="button"
+                className="btn-text"
+                onClick={() =>
+                  onApplySuggestedPrice(lastRoute.suggestedPricePerKWh!)
+                }
+              >
+                Usar precio sugerido
+              </button>
             </p>
           ) : null}
         </form>

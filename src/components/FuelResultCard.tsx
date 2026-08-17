@@ -6,19 +6,30 @@ type FuelResultCardProps = {
   result: FuelTripResult
   mode: TripMode
   unitSystem: UnitSystem
+  avgSpeedLimitKmh?: number
+  avgTravelSpeedKmh?: number
 }
 
 function Metrics({
   result,
   label,
   unitSystem,
+  avgSpeedLimitKmh,
+  avgTravelSpeedKmh,
 }: {
   result: FuelTripResultBase
   label?: string
   unitSystem: UnitSystem
+  avgSpeedLimitKmh?: number
+  avgTravelSpeedKmh?: number
 }) {
   const speed = formatAvgSpeedRow(
-    { distanceKm: result.distanceKm, driveHours: result.driveHours },
+    {
+      distanceKm: result.distanceKm,
+      driveHours: result.driveHours,
+      avgSpeedLimitKmh,
+      avgTravelSpeedKmh,
+    },
     unitSystem,
   )
 
@@ -68,19 +79,42 @@ function Metrics({
   )
 }
 
-export function FuelResultCard({ result, mode, unitSystem }: FuelResultCardProps) {
+export function FuelResultCard({
+  result,
+  mode,
+  unitSystem,
+  avgSpeedLimitKmh,
+  avgTravelSpeedKmh,
+}: FuelResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
     return (
       <article className="result-card">
-        <Metrics result={result.oneWay} label="Ida" unitSystem={unitSystem} />
-        <Metrics result={result} label="Redondo" unitSystem={unitSystem} />
+        <Metrics
+          result={result.oneWay}
+          label="Ida"
+          unitSystem={unitSystem}
+          avgSpeedLimitKmh={avgSpeedLimitKmh}
+          avgTravelSpeedKmh={avgTravelSpeedKmh}
+        />
+        <Metrics
+          result={result}
+          label="Redondo"
+          unitSystem={unitSystem}
+          avgSpeedLimitKmh={avgSpeedLimitKmh}
+          avgTravelSpeedKmh={avgTravelSpeedKmh}
+        />
       </article>
     )
   }
 
   return (
     <article className="result-card">
-      <Metrics result={result} unitSystem={unitSystem} />
+      <Metrics
+        result={result}
+        unitSystem={unitSystem}
+        avgSpeedLimitKmh={avgSpeedLimitKmh}
+        avgTravelSpeedKmh={avgTravelSpeedKmh}
+      />
     </article>
   )
 }
