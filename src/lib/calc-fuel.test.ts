@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { iceVehicles } from '../data/vehicles-ice'
+import { presetRoutes } from '../data/routes'
 import { calcFuelTrip } from './calc-fuel'
 import { FUEL_MX_FACTOR } from './constants'
 import type { IceVersion } from '../types'
@@ -76,6 +78,55 @@ describe('calcFuelTrip ICE/HEV', () => {
     expect(result.litersUsed).toBeCloseTo(result.oneWay!.litersUsed * 2, 5)
     expect(result.costMxn).toBeCloseTo(result.oneWay!.costMxn * 2, 5)
     expect(result.driveHours).toBeCloseTo((120 / 90) * 2, 5)
+  })
+
+  it('recomputes round-trip stops when one-way fits but total distance does not', () => {
+    const gdlCdmx = presetRoutes.find((route) => route.id === 'gdl-cdmx')!
+    const version = iceVehicles
+      .find((vehicle) => vehicle.id === 'vw-virtus')!
+      .versions.find((item) => item.id === 'virtus-comfortline')!
+
+    const oneWay = calcFuelTrip({
+      distanceKm: gdlCdmx.distanceKm,
+      version,
+      driveStyle: 'normal',
+      pricePerLiter: 24,
+      mode: 'oneWay',
+      driveHoursOneWay: gdlCdmx.driveHoursOneWay,
+    })
+    const roundTrip = calcFuelTrip({
+      distanceKm: gdlCdmx.distanceKm,
+      version,
+      driveStyle: 'normal',
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+      driveHoursOneWay: gdlCdmx.driveHoursOneWay,
+    })
+
+    expect(oneWay.reachesWithoutStop).toBe(true)
+    expect(oneWay.fuelStopsEstimate).toBe(0)
+    expect(roundTrip.oneWay!.reachesWithoutStop).toBe(true)
+    expect(roundTrip.litersUsed).toBeGreaterThan(version.tankLiters)
+    expect(roundTrip.reachesWithoutStop).toBe(false)
+    expect(roundTrip.fuelStopsEstimate).toBeGreaterThan(0)
+  })
+
+  it('shows lower arrival tank % on round trip than on the one-way leg', () => {
+    const version = virtus()
+    const result = calcFuelTrip({
+      distanceKm: 120,
+      version,
+      driveStyle: 'normal',
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+    })
+
+    expect(result.oneWay).toBeDefined()
+    expect(result.arrivalFuelPercent).toBeCloseTo(
+      100 - (result.litersUsed / version.tankLiters) * 100,
+      5,
+    )
+    expect(result.arrivalFuelPercent).toBeLessThan(result.oneWay!.arrivalFuelPercent)
   })
 
   it('flags a stop needed when trip exceeds the safety-factored range', () => {

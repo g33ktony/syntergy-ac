@@ -66,17 +66,18 @@ export function calcFuelTrip(input: FuelTripInput): FuelTripResult {
     return oneWay
   }
 
-  const litersUsed = oneWay.litersUsed * 2
+  // Recompute feasibility for the full round-trip distance. Doubling the
+  // one-way stop flags is wrong when one leg fits the tank but both do not
+  // (e.g. GDL↔CDMX presets).
+  const roundTrip = calcOneWay({
+    ...input,
+    distanceKm: input.distanceKm * 2,
+    driveHoursOneWay:
+      input.driveHoursOneWay != null ? input.driveHoursOneWay * 2 : undefined,
+  })
 
   return {
-    distanceKm: oneWay.distanceKm * 2,
-    driveHours: oneWay.driveHours * 2,
-    litersUsed,
-    costMxn: litersUsed * input.pricePerLiter,
-    arrivalFuelPercent: oneWay.arrivalFuelPercent, // refuels are assumed en route
-    reachesWithoutStop: oneWay.reachesWithoutStop,
-    fuelStopsEstimate: oneWay.fuelStopsEstimate * 2,
-    fuel: oneWay.fuel,
+    ...roundTrip,
     oneWay,
   }
 }
