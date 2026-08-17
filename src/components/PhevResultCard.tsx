@@ -1,6 +1,11 @@
 import type { PhevTripResult, PhevTripResultBase, TripMode, UnitSystem } from '../types'
 import { formatHours, formatLocaleNumber, formatMxn, fuelTypeLabel } from '../lib/format'
-import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
+import {
+  formatAvgSpeedRow,
+  formatElevationRow,
+  formatTripUnits,
+  roundTripElevation,
+} from '../lib/units'
 
 type PhevResultCardProps = {
   result: PhevTripResult
@@ -8,6 +13,8 @@ type PhevResultCardProps = {
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }
 
 function roundTripLabel(rechargeAtDestination: boolean): string {
@@ -22,12 +29,16 @@ function Metrics({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
 }: {
   result: PhevTripResultBase
   label?: string
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }) {
   const speed = formatAvgSpeedRow(
     {
@@ -38,6 +49,7 @@ function Metrics({
     },
     unitSystem,
   )
+  const elevation = formatElevationRow(elevationGainM, elevationLossM, unitSystem)
   const fuelWord = fuelTypeLabel(result.fuel).toLowerCase()
 
   return (
@@ -56,6 +68,12 @@ function Metrics({
           <dt>{speed.label}</dt>
           <dd>{speed.value}</dd>
         </div>
+        {elevation ? (
+          <div>
+            <dt>{elevation.label}</dt>
+            <dd>{elevation.value}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Tramo eléctrico</dt>
           <dd>
@@ -106,8 +124,11 @@ export function PhevResultCard({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
 }: PhevResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
+    const roundTrip = roundTripElevation(elevationGainM, elevationLossM)
     return (
       <article className="result-card">
         <Metrics
@@ -116,6 +137,8 @@ export function PhevResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={elevationGainM}
+          elevationLossM={elevationLossM}
         />
         <Metrics
           result={result}
@@ -123,6 +146,8 @@ export function PhevResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={roundTrip.gainM}
+          elevationLossM={roundTrip.lossM}
         />
       </article>
     )
@@ -135,6 +160,8 @@ export function PhevResultCard({
         unitSystem={unitSystem}
         avgSpeedLimitKmh={avgSpeedLimitKmh}
         avgTravelSpeedKmh={avgTravelSpeedKmh}
+        elevationGainM={elevationGainM}
+        elevationLossM={elevationLossM}
       />
     </article>
   )

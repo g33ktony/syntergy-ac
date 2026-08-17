@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_HIGHWAY_KMH } from './constants'
 import {
   formatAvgSpeedRow,
+  formatElevationRow,
   formatTripUnits,
   kmhToMph,
   kmToMi,
@@ -66,6 +67,23 @@ describe('resolveAvgSpeedKmh', () => {
     expect(row.label).toBe('Vel. promedio')
     expect(row.value).toContain('mph')
     expect(row.value).toContain('estimada')
+  })
+})
+
+describe('formatElevationRow', () => {
+  it('returns null when no elevation data exists', () => {
+    expect(formatElevationRow(undefined, undefined, 'metric')).toBeNull()
+  })
+
+  it('formats gain/loss in metric', () => {
+    const row = formatElevationRow(450, 380, 'metric')
+    expect(row?.label).toBe('Elevación')
+    expect(row?.value).toBe('+450 m / -380 m')
+  })
+
+  it('formats gain/loss in imperial', () => {
+    const row = formatElevationRow(100, 0, 'imperial')
+    expect(row?.value).toContain('ft')
   })
 })
 

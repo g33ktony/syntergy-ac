@@ -4,6 +4,7 @@ import {
   KM_PER_CHARGE_STOP,
   MX_FACTOR,
 } from './constants'
+import { elevationEnergyDeltaKWh } from './elevation'
 import type {
   AnyVehicle,
   ComparisonRow,
@@ -28,32 +29,28 @@ function driveHoursForDistance(
   return distanceKm / DEFAULT_HIGHWAY_KMH
 }
 
-function calcOneWay(input: TripInput): TripResultBase {
-  const {
-    distanceKm,
-    version,
-    driveStyle,
-    pricePerKWh,
-    reservePercent,
-    driveHoursOneWay,
-  } = input
-
-  const styleMult = DRIVE_STYLE_MULTIPLIERS[driveStyle]
+function baseEnergyKWh(input: TripInput): number {
+  const styleMult = DRIVE_STYLE_MULTIPLIERS[input.driveStyle]
   const consumptionEffective =
-    version.consumptionKWhPer100 * MX_FACTOR * styleMult
-  const energyKWh = (distanceKm * consumptionEffective) / 100
-  const arrivalSocPercent = 100 - (energyKWh / version.batteryKWh) * 100
-  const chargeStopsEstimate = Math.ceil(distanceKm / KM_PER_CHARGE_STOP)
+    input.version.consumptionKWhPer100 * MX_FACTOR * styleMult
+  return (input.distanceKm * consumptionEffective) / 100
+}
 
+function fromEnergyKWh(
+  energyKWh: number,
+  distanceKm: number,
+  input: TripInput,
+): TripResultBase {
+  const arrivalSocPercent = 100 - (energyKWh / input.version.batteryKWh) * 100
   return {
     distanceKm,
-    driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
+    driveHours: driveHoursForDistance(distanceKm, input.driveHoursOneWay),
     energyKWh,
-    costMxn: energyKWh * pricePerKWh,
+    costMxn: energyKWh * input.pricePerKWh,
     arrivalSocPercent,
-    reachesWithReserve: arrivalSocPercent >= reservePercent,
-    chargeStopsEstimate,
-    connector: version.connector,
+    reachesWithReserve: arrivalSocPercent >= input.reservePercent,
+    chargeStopsEstimate: Math.ceil(distanceKm / KM_PER_CHARGE_STOP),
+    connector: input.version.connector,
   }
 }
 
@@ -62,28 +59,44 @@ function calcOneWay(input: TripInput): TripResultBase {
  * No React / I/O — safe to unit-test.
  */
 export function calcTrip(input: TripInput): TripResult {
-  const oneWay = calcOneWay(input)
+  const oneWayElevationDelta = elevationEnergyDeltaKWh(
+    input.elevationGainM,
+    input.elevationLossM,
+  )
+  const oneWayEnergy = Math.max(
+    0,
+    baseEnergyKWh(input) + oneWayElevationDelta,
+  )
+  const oneWay = fromEnergyKWh(oneWayEnergy, input.distanceKm, input)
 
   if (input.mode === 'oneWay') {
     return oneWay
   }
 
-  const energyKWh = oneWay.energyKWh * 2
-  const arrivalSocPercent =
-    100 - (2 * oneWay.energyKWh * 100) / input.version.batteryKWh
+  // Round trip: the return leg climbs what the outbound leg descended and
+  // vice versa (route-enrichment spec §4.4) — never just double the
+  // one-way elevation delta.
+  const returnLegElevationDelta = elevationEnergyDeltaKWh(
+    input.elevationLossM,
+    input.elevationGainM,
+  )
+  const roundTripEnergy = Math.max(
+    0,
+    baseEnergyKWh(input) * 2 + oneWayElevationDelta + returnLegElevationDelta,
+  )
+  const roundTrip = fromEnergyKWh(
+    roundTripEnergy,
+    input.distanceKm * 2,
+    input,
+  )
 
   return {
-    distanceKm: oneWay.distanceKm * 2,
+    ...roundTrip,
     driveHours: oneWay.driveHours * 2,
-    energyKWh,
-    costMxn: energyKWh * input.pricePerKWh,
-    arrivalSocPercent,
-    reachesWithReserve: arrivalSocPercent >= input.reservePercent,
     chargeStopsEstimate: oneWay.chargeStopsEstimate,
     chargeStopsRoundTripEstimate: Math.ceil(
       (2 * input.distanceKm) / KM_PER_CHARGE_STOP,
     ),
-    connector: input.version.connector,
     oneWay,
   }
 }

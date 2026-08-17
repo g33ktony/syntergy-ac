@@ -66,6 +66,8 @@ function calcResultForVehicle(
         reservePercent: RESERVE_PERCENT,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
+        elevationGainM: route.elevationGainM,
+        elevationLossM: route.elevationLossM,
       })
     }
     case 'ICE':
@@ -80,6 +82,8 @@ function calcResultForVehicle(
         pricePerLiter,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
+        elevationGainM: route.elevationGainM,
+        elevationLossM: route.elevationLossM,
       })
     }
     case 'PHEV': {
@@ -94,6 +98,8 @@ function calcResultForVehicle(
         pricePerLiter,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
+        elevationGainM: route.elevationGainM,
+        elevationLossM: route.elevationLossM,
       })
     }
   }
@@ -117,9 +123,11 @@ function renderResultCard(
   unitSystem: UnitSystem,
   route: Route,
 ) {
-  const speedProps = {
+  const routeProps = {
     avgSpeedLimitKmh: route.avgSpeedLimitKmh,
     avgTravelSpeedKmh: route.avgTravelSpeedKmh,
+    elevationGainM: route.elevationGainM,
+    elevationLossM: route.elevationLossM,
   }
   switch (result.vehicleType) {
     case 'BEV':
@@ -128,7 +136,7 @@ function renderResultCard(
           result={result}
           mode={mode}
           unitSystem={unitSystem}
-          {...speedProps}
+          {...routeProps}
         />
       )
     case 'ICE':
@@ -138,7 +146,7 @@ function renderResultCard(
           result={result}
           mode={mode}
           unitSystem={unitSystem}
-          {...speedProps}
+          {...routeProps}
         />
       )
     case 'PHEV':
@@ -147,7 +155,7 @@ function renderResultCard(
           result={result}
           mode={mode}
           unitSystem={unitSystem}
-          {...speedProps}
+          {...routeProps}
         />
       )
   }

@@ -82,6 +82,9 @@ export type TripInput = {
   reservePercent: number
   mode: TripMode
   driveHoursOneWay?: number
+  /** Route-level elevation (route-enrichment spec §7.5); ABRP-sourced, opt-in. */
+  elevationGainM?: number
+  elevationLossM?: number
 }
 
 export type TripResultBase = {
@@ -178,6 +181,8 @@ export type FuelTripInput = {
   pricePerLiter: number
   mode: TripMode
   driveHoursOneWay?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }
 
 export type FuelTripResultBase = {
@@ -205,6 +210,8 @@ export type PhevTripInput = {
   driveHoursOneWay?: number
   /** Conservative default: no recharge at destination on round trips. */
   rechargeAtDestination?: boolean
+  elevationGainM?: number
+  elevationLossM?: number
 }
 
 export type PhevTripResultBase = {

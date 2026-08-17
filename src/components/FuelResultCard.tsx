@@ -1,6 +1,11 @@
 import type { FuelTripResult, FuelTripResultBase, TripMode, UnitSystem } from '../types'
 import { formatHours, formatLocaleNumber, formatMxn, fuelTypeLabel } from '../lib/format'
-import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
+import {
+  formatAvgSpeedRow,
+  formatElevationRow,
+  formatTripUnits,
+  roundTripElevation,
+} from '../lib/units'
 
 type FuelResultCardProps = {
   result: FuelTripResult
@@ -8,6 +13,8 @@ type FuelResultCardProps = {
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }
 
 function Metrics({
@@ -16,12 +23,16 @@ function Metrics({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
 }: {
   result: FuelTripResultBase
   label?: string
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }) {
   const speed = formatAvgSpeedRow(
     {
@@ -32,6 +43,7 @@ function Metrics({
     },
     unitSystem,
   )
+  const elevation = formatElevationRow(elevationGainM, elevationLossM, unitSystem)
 
   return (
     <div className="metrics">
@@ -49,6 +61,12 @@ function Metrics({
           <dt>{speed.label}</dt>
           <dd>{speed.value}</dd>
         </div>
+        {elevation ? (
+          <div>
+            <dt>{elevation.label}</dt>
+            <dd>{elevation.value}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Combustible usado</dt>
           <dd>{formatTripUnits(result.litersUsed, 'volume', unitSystem)}</dd>
@@ -85,8 +103,11 @@ export function FuelResultCard({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
 }: FuelResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
+    const roundTrip = roundTripElevation(elevationGainM, elevationLossM)
     return (
       <article className="result-card">
         <Metrics
@@ -95,6 +116,8 @@ export function FuelResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={elevationGainM}
+          elevationLossM={elevationLossM}
         />
         <Metrics
           result={result}
@@ -102,6 +125,8 @@ export function FuelResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={roundTrip.gainM}
+          elevationLossM={roundTrip.lossM}
         />
       </article>
     )
@@ -114,6 +139,8 @@ export function FuelResultCard({
         unitSystem={unitSystem}
         avgSpeedLimitKmh={avgSpeedLimitKmh}
         avgTravelSpeedKmh={avgTravelSpeedKmh}
+        elevationGainM={elevationGainM}
+        elevationLossM={elevationLossM}
       />
     </article>
   )

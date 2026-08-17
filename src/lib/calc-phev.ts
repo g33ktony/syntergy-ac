@@ -4,6 +4,7 @@ import {
   FUEL_MX_FACTOR,
 } from './constants'
 import { calcTankFeasibility } from './calc-tank'
+import { elevationEnergyDeltaKWh, elevationFuelDeltaLiters } from './elevation'
 import type { PhevTripInput, PhevTripResult, PhevTripResultBase } from '../types'
 
 function driveHoursForDistance(
@@ -40,7 +41,9 @@ function withTankMetrics(
  *
  * EV energy uses implied kWh/100 from pack ÷ official range, then the same
  * MX_FACTOR × drive-style multipliers as BEV `calcTrip` (consumption
- * direction — not a haircut on official range).
+ * direction — not a haircut on official range). Elevation (route-enrichment
+ * spec §7.5) splits proportionally by km share between the electric and
+ * fuel portions — elevation is a whole-route fact, not segment-specific.
  */
 function calcOneWay(input: PhevTripInput): PhevTripResultBase {
   const { distanceKm, version, driveStyle, pricePerKWh, pricePerLiter, driveHoursOneWay } =
@@ -59,11 +62,27 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
 
   const electricKmUsed = Math.min(distanceKm, electricRangeEffective)
   const fuelKmUsed = Math.max(0, distanceKm - electricRangeEffective)
-  const energyKWh = (electricKmUsed * evConsumptionEffective) / 100
+  const baseEnergyKWh = (electricKmUsed * evConsumptionEffective) / 100
 
   const consumptionEffective =
     version.consumptionLPer100ChargeSustaining * FUEL_MX_FACTOR * styleMult
-  const litersUsed = (fuelKmUsed * consumptionEffective) / 100
+  const baseLiters = (fuelKmUsed * consumptionEffective) / 100
+
+  const electricShare = distanceKm > 0 ? electricKmUsed / distanceKm : 0
+  const fuelShare = distanceKm > 0 ? fuelKmUsed / distanceKm : 0
+  const energyKWh = Math.max(
+    0,
+    baseEnergyKWh +
+      elevationEnergyDeltaKWh(
+        input.elevationGainM,
+        input.elevationLossM,
+        electricShare,
+      ),
+  )
+  const litersUsed = Math.max(
+    0,
+    baseLiters + elevationFuelDeltaLiters(input.elevationGainM, fuelShare),
+  )
 
   return withTankMetrics(
     {
@@ -91,7 +110,13 @@ function calcFuelOnlyLeg(
   const styleMult = DRIVE_STYLE_MULTIPLIERS[driveStyle]
   const consumptionEffective =
     version.consumptionLPer100ChargeSustaining * FUEL_MX_FACTOR * styleMult
-  const litersUsed = (distanceKm * consumptionEffective) / 100
+  const baseLiters = (distanceKm * consumptionEffective) / 100
+  // Return leg reverses the outbound elevation profile — what was
+  // descended on the way there is climbed on the way back.
+  const litersUsed = Math.max(
+    0,
+    baseLiters + elevationFuelDeltaLiters(input.elevationLossM),
+  )
 
   return withTankMetrics(
     {
@@ -127,7 +152,13 @@ export function calcPhevTrip(input: PhevTripInput): PhevTripResult {
 
   const rechargeAtDestination = Boolean(input.rechargeAtDestination)
   const returnLeg = rechargeAtDestination
-    ? calcOneWay({ ...input, driveHoursOneWay: input.driveHoursOneWay })
+    ? calcOneWay({
+        ...input,
+        driveHoursOneWay: input.driveHoursOneWay,
+        // Return leg reverses the outbound elevation profile.
+        elevationGainM: input.elevationLossM,
+        elevationLossM: input.elevationGainM,
+      })
     : calcFuelOnlyLeg(input, input.driveHoursOneWay)
 
   const litersUsed = oneWay.litersUsed + returnLeg.litersUsed

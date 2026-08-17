@@ -37,3 +37,22 @@ export const FUEL_RANGE_SAFETY_FACTOR = 0.85
 
 /** Same MX highway realism discount applied to BEV consumption (design §6.1). */
 export const FUEL_MX_FACTOR = MX_FACTOR
+
+// ---------------------------------------------------------------------------
+// Elevation → consumption (route-enrichment spec §7.5, rollout step 3).
+// Simplified, vehicle-mass-agnostic heuristics — versioned here so future
+// tuning has one place to change. Only applied when a route actually
+// carries elevationGainM/elevationLossM (currently ABRP-only, opt-in).
+// ---------------------------------------------------------------------------
+
+/** Extra electric energy per 100 m of net climb (BEV/PHEV electric portion). */
+export const ELEVATION_KWH_PER_100M_GAIN = 0.18
+
+/**
+ * Fraction of a descent's equivalent energy recovered via regen braking.
+ * Electric powertrains only — liquid fuel has no regen credit.
+ */
+export const ELEVATION_REGEN_RECOVERY = 0.65
+
+/** Extra fuel per 100 m of climb (ICE/HEV/PHEV fuel portion). No credit for descent. */
+export const ELEVATION_L_PER_100M_GAIN = 0.09

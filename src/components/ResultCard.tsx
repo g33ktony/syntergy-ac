@@ -1,6 +1,11 @@
 import type { TripResult, TripMode, UnitSystem } from '../types'
 import { formatHours, formatLocaleNumber, formatMxn } from '../lib/format'
-import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
+import {
+  formatAvgSpeedRow,
+  formatElevationRow,
+  formatTripUnits,
+  roundTripElevation,
+} from '../lib/units'
 
 type ResultCardProps = {
   result: TripResult
@@ -8,6 +13,8 @@ type ResultCardProps = {
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }
 
 function Metrics({
@@ -16,6 +23,8 @@ function Metrics({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
 }: {
   result: Pick<
     TripResult,
@@ -33,6 +42,8 @@ function Metrics({
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }) {
   const speed = formatAvgSpeedRow(
     {
@@ -43,6 +54,7 @@ function Metrics({
     },
     unitSystem,
   )
+  const elevation = formatElevationRow(elevationGainM, elevationLossM, unitSystem)
 
   return (
     <div className="metrics">
@@ -60,6 +72,12 @@ function Metrics({
           <dt>{speed.label}</dt>
           <dd>{speed.value}</dd>
         </div>
+        {elevation ? (
+          <div>
+            <dt>{elevation.label}</dt>
+            <dd>{elevation.value}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Energía</dt>
           <dd>{formatTripUnits(result.energyKWh, 'energy', unitSystem)}</dd>
@@ -105,8 +123,11 @@ export function ResultCard({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
 }: ResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
+    const roundTrip = roundTripElevation(elevationGainM, elevationLossM)
     return (
       <article className="result-card">
         <Metrics
@@ -115,6 +136,8 @@ export function ResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={elevationGainM}
+          elevationLossM={elevationLossM}
         />
         <Metrics
           result={result}
@@ -122,6 +145,8 @@ export function ResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={roundTrip.gainM}
+          elevationLossM={roundTrip.lossM}
         />
       </article>
     )
@@ -134,6 +159,8 @@ export function ResultCard({
         unitSystem={unitSystem}
         avgSpeedLimitKmh={avgSpeedLimitKmh}
         avgTravelSpeedKmh={avgTravelSpeedKmh}
+        elevationGainM={elevationGainM}
+        elevationLossM={elevationLossM}
       />
     </article>
   )

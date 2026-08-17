@@ -211,4 +211,56 @@ describe('calcPhevTrip', () => {
     expect(roundTrip.fuelStopsEstimate).toBeGreaterThan(0)
     expect(roundTrip.rechargeAtDestination).toBe(false)
   })
+
+  it('splits elevation adjustment proportionally between electric and fuel portions', () => {
+    const version = ravFourPrime()
+    const flat = calcPhevTrip({
+      distanceKm: 150,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay',
+    })
+    const climbing = calcPhevTrip({
+      distanceKm: 150,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay',
+      elevationGainM: 900,
+    })
+
+    // Trip blends electric (first ~68 km) then fuel (remainder) — climbing
+    // should raise both the electric energy and the fuel used.
+    expect(climbing.energyKWh).toBeGreaterThan(flat.energyKWh)
+    expect(climbing.litersUsed).toBeGreaterThan(flat.litersUsed)
+  })
+
+  it('reverses elevation for the return leg on a no-recharge round trip', () => {
+    const version = ravFourPrime()
+    const flat = calcPhevTrip({
+      distanceKm: 150,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+    })
+    const downhillOneWay = calcPhevTrip({
+      distanceKm: 150,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+      elevationGainM: 0,
+      elevationLossM: 500,
+    })
+
+    // Return leg is fuel-only (no recharge) and climbs the 500 m back with
+    // no descent credit — total liters must exceed the flat baseline.
+    expect(downhillOneWay.litersUsed).toBeGreaterThan(flat.litersUsed)
+  })
 })

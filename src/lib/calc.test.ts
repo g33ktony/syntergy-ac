@@ -102,4 +102,58 @@ describe('calcTrip BEV', () => {
     expect(result.arrivalSocPercent).toBeLessThan(RESERVE_PERCENT)
     expect(result.reachesWithReserve).toBe(false)
   })
+
+  it('adds elevation-adjusted energy on a one-way climb', () => {
+    const version = dolphinPlus()
+    const flat = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'oneWay',
+    })
+    const climbing = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'oneWay',
+      elevationGainM: 800,
+      elevationLossM: 0,
+    })
+
+    expect(climbing.energyKWh).toBeGreaterThan(flat.energyKWh)
+  })
+
+  it('round trip elevation is gain+loss both ways, not the one-way delta doubled', () => {
+    const version = dolphinPlus()
+    // Mostly downhill one-way (regen credit) — the return leg climbs it
+    // back, so round trip must NOT be cheaper than round trip with no
+    // elevation data at all.
+    const flat = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+    })
+    const downhillOneWay = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+      elevationGainM: 0,
+      elevationLossM: 500,
+    })
+
+    // Regen never fully recovers descent energy, and the return leg pays
+    // to climb the same 500 m back — round trip must cost more energy
+    // than flat, even though the one-way leg alone would look cheaper.
+    expect(downhillOneWay.energyKWh).toBeGreaterThan(flat.energyKWh)
+  })
 })
