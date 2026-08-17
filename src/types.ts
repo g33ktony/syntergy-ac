@@ -31,6 +31,11 @@ export type DriveStyle = 'eco' | 'normal' | 'aggressive'
 
 export type TripMode = 'oneWay' | 'roundTrip'
 
+/** Display preference only — calculations stay metric/SI. */
+export type UnitSystem = 'metric' | 'imperial'
+
+export type SpeedDisplayKind = 'limits' | 'estimated' | 'fallback'
+
 export type TripInput = {
   distanceKm: number
   version: VehicleVersion

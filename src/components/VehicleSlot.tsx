@@ -6,6 +6,7 @@ import type {
   DriveStyle,
   Route,
   TripMode,
+  UnitSystem,
 } from '../types'
 import { FuelResultCard } from './FuelResultCard'
 import { PhevResultCard } from './PhevResultCard'
@@ -27,6 +28,7 @@ type VehicleSlotProps = {
   driveStyle: DriveStyle
   pricePerKWh: number
   pricePerLiter: number
+  unitSystem: UnitSystem
 }
 
 /** `AnyVersion`'s variants aren't tagged; distinguish by their unique fields. */
@@ -99,15 +101,30 @@ function renderResultCard(
   vehicle: AnyVehicle,
   result: AnyTripResult,
   mode: TripMode,
+  unitSystem: UnitSystem,
 ) {
   switch (vehicle.type) {
     case 'BEV':
-      return <ResultCard result={result as never} mode={mode} />
+      return (
+        <ResultCard result={result as never} mode={mode} unitSystem={unitSystem} />
+      )
     case 'ICE':
     case 'HEV':
-      return <FuelResultCard result={result as never} mode={mode} />
+      return (
+        <FuelResultCard
+          result={result as never}
+          mode={mode}
+          unitSystem={unitSystem}
+        />
+      )
     case 'PHEV':
-      return <PhevResultCard result={result as never} mode={mode} />
+      return (
+        <PhevResultCard
+          result={result as never}
+          mode={mode}
+          unitSystem={unitSystem}
+        />
+      )
   }
 }
 
@@ -121,6 +138,7 @@ export function VehicleSlot({
   driveStyle,
   pricePerKWh,
   pricePerLiter,
+  unitSystem,
 }: VehicleSlotProps) {
   const vehicle: AnyVehicle | null =
     vehicles.find((v) => v.id === selection.vehicleId) ?? null
@@ -196,7 +214,7 @@ export function VehicleSlot({
       ) : !vehicle || !version ? (
         <p className="slot-hint">Elige modelo y versión.</p>
       ) : result ? (
-        renderResultCard(vehicle, result, mode)
+        renderResultCard(vehicle, result, mode, unitSystem)
       ) : null}
     </section>
   )

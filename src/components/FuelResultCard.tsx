@@ -1,8 +1,10 @@
-import type { FuelTripResult, FuelTripResultBase, TripMode } from '../types'
+import type { FuelTripResult, FuelTripResultBase, TripMode, UnitSystem } from '../types'
+import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
 
 type FuelResultCardProps = {
   result: FuelTripResult
   mode: TripMode
+  unitSystem: UnitSystem
 }
 
 function formatHours(hours: number): string {
@@ -23,25 +25,36 @@ function formatNumber(value: number, digits = 1): string {
 function Metrics({
   result,
   label,
+  unitSystem,
 }: {
   result: FuelTripResultBase
   label?: string
+  unitSystem: UnitSystem
 }) {
+  const speed = formatAvgSpeedRow(
+    { distanceKm: result.distanceKm, driveHours: result.driveHours },
+    unitSystem,
+  )
+
   return (
     <div className="metrics">
       {label ? <h4 className="metrics-label">{label}</h4> : null}
       <dl>
         <div>
           <dt>Distancia</dt>
-          <dd>{formatNumber(result.distanceKm, 0)} km</dd>
+          <dd>{formatTripUnits(result.distanceKm, 'distance', unitSystem, 0)}</dd>
         </div>
         <div>
           <dt>Tiempo estimado</dt>
           <dd>{formatHours(result.driveHours)}</dd>
         </div>
         <div>
+          <dt>{speed.label}</dt>
+          <dd>{speed.value}</dd>
+        </div>
+        <div>
           <dt>Combustible usado</dt>
-          <dd>{formatNumber(result.litersUsed)} L</dd>
+          <dd>{formatTripUnits(result.litersUsed, 'volume', unitSystem)}</dd>
         </div>
         <div>
           <dt>Costo</dt>
@@ -69,24 +82,19 @@ function Metrics({
   )
 }
 
-/**
- * ICE/HEV counterpart to `ResultCard` (Phase 2, plan Task 6). Standalone —
- * not wired into `VehicleSlot` yet, since that's a Phase 1-owned shared
- * component; merge coordination decides how BEV/fuel cards compose.
- */
-export function FuelResultCard({ result, mode }: FuelResultCardProps) {
+export function FuelResultCard({ result, mode, unitSystem }: FuelResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
     return (
       <article className="result-card">
-        <Metrics result={result.oneWay} label="Ida" />
-        <Metrics result={result} label="Redondo" />
+        <Metrics result={result.oneWay} label="Ida" unitSystem={unitSystem} />
+        <Metrics result={result} label="Redondo" unitSystem={unitSystem} />
       </article>
     )
   }
 
   return (
     <article className="result-card">
-      <Metrics result={result} />
+      <Metrics result={result} unitSystem={unitSystem} />
     </article>
   )
 }

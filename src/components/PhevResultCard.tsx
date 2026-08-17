@@ -1,8 +1,10 @@
-import type { PhevTripResult, PhevTripResultBase, TripMode } from '../types'
+import type { PhevTripResult, PhevTripResultBase, TripMode, UnitSystem } from '../types'
+import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
 
 type PhevResultCardProps = {
   result: PhevTripResult
   mode: TripMode
+  unitSystem: UnitSystem
 }
 
 function formatHours(hours: number): string {
@@ -23,29 +25,46 @@ function formatNumber(value: number, digits = 1): string {
 function Metrics({
   result,
   label,
+  unitSystem,
 }: {
   result: PhevTripResultBase
   label?: string
+  unitSystem: UnitSystem
 }) {
+  const speed = formatAvgSpeedRow(
+    { distanceKm: result.distanceKm, driveHours: result.driveHours },
+    unitSystem,
+  )
+
   return (
     <div className="metrics">
       {label ? <h4 className="metrics-label">{label}</h4> : null}
       <dl>
         <div>
           <dt>Distancia</dt>
-          <dd>{formatNumber(result.distanceKm, 0)} km</dd>
+          <dd>{formatTripUnits(result.distanceKm, 'distance', unitSystem, 0)}</dd>
         </div>
         <div>
           <dt>Tiempo estimado</dt>
           <dd>{formatHours(result.driveHours)}</dd>
         </div>
         <div>
+          <dt>{speed.label}</dt>
+          <dd>{speed.value}</dd>
+        </div>
+        <div>
           <dt>Tramo eléctrico</dt>
-          <dd>{formatNumber(result.electricKmUsed, 0)} km · {formatNumber(result.energyKWh)} kWh</dd>
+          <dd>
+            {formatTripUnits(result.electricKmUsed, 'distance', unitSystem, 0)} ·{' '}
+            {formatTripUnits(result.energyKWh, 'energy', unitSystem)}
+          </dd>
         </div>
         <div>
           <dt>Tramo en gasolina</dt>
-          <dd>{formatNumber(result.fuelKmUsed, 0)} km · {formatNumber(result.litersUsed)} L</dd>
+          <dd>
+            {formatTripUnits(result.fuelKmUsed, 'distance', unitSystem, 0)} ·{' '}
+            {formatTripUnits(result.litersUsed, 'volume', unitSystem)}
+          </dd>
         </div>
         <div>
           <dt>Costo</dt>
@@ -64,22 +83,15 @@ function Metrics({
   )
 }
 
-/**
- * PHEV counterpart to `ResultCard` (Phase 2, plan Task 6). Shows the
- * electric-first / fuel-remainder blend explicitly rather than collapsing
- * to a single energy number, per design's "unified comparison row" note
- * that every powertrain should still expose its own breakdown.
- *
- * Standalone — not wired into `VehicleSlot` yet (Phase 1-owned).
- */
-export function PhevResultCard({ result, mode }: PhevResultCardProps) {
+export function PhevResultCard({ result, mode, unitSystem }: PhevResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
     return (
       <article className="result-card">
-        <Metrics result={result.oneWay} label="Ida" />
+        <Metrics result={result.oneWay} label="Ida" unitSystem={unitSystem} />
         <Metrics
           result={result}
           label="Redondo (sin recarga en destino)"
+          unitSystem={unitSystem}
         />
       </article>
     )
@@ -87,7 +99,7 @@ export function PhevResultCard({ result, mode }: PhevResultCardProps) {
 
   return (
     <article className="result-card">
-      <Metrics result={result} />
+      <Metrics result={result} unitSystem={unitSystem} />
     </article>
   )
 }

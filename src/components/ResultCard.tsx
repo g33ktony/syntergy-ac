@@ -1,8 +1,10 @@
-import type { TripResult, TripMode } from '../types'
+import type { TripResult, TripMode, UnitSystem } from '../types'
+import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
 
 type ResultCardProps = {
   result: TripResult
   mode: TripMode
+  unitSystem: UnitSystem
 }
 
 function formatHours(hours: number): string {
@@ -23,6 +25,7 @@ function formatNumber(value: number, digits = 1): string {
 function Metrics({
   result,
   label,
+  unitSystem,
 }: {
   result: Pick<
     TripResult,
@@ -37,22 +40,32 @@ function Metrics({
     | 'connector'
   >
   label?: string
+  unitSystem: UnitSystem
 }) {
+  const speed = formatAvgSpeedRow(
+    { distanceKm: result.distanceKm, driveHours: result.driveHours },
+    unitSystem,
+  )
+
   return (
     <div className="metrics">
       {label ? <h4 className="metrics-label">{label}</h4> : null}
       <dl>
         <div>
           <dt>Distancia</dt>
-          <dd>{formatNumber(result.distanceKm, 0)} km</dd>
+          <dd>{formatTripUnits(result.distanceKm, 'distance', unitSystem, 0)}</dd>
         </div>
         <div>
           <dt>Tiempo estimado</dt>
           <dd>{formatHours(result.driveHours)}</dd>
         </div>
         <div>
+          <dt>{speed.label}</dt>
+          <dd>{speed.value}</dd>
+        </div>
+        <div>
           <dt>Energía</dt>
-          <dd>{formatNumber(result.energyKWh)} kWh</dd>
+          <dd>{formatTripUnits(result.energyKWh, 'energy', unitSystem)}</dd>
         </div>
         <div>
           <dt>Costo</dt>
@@ -89,19 +102,23 @@ function Metrics({
   )
 }
 
-export function ResultCard({ result, mode }: ResultCardProps) {
+export function ResultCard({ result, mode, unitSystem }: ResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
     return (
       <article className="result-card">
-        <Metrics result={result.oneWay} label="Ida" />
-        <Metrics result={result} label="Redondo (sin cargar en destino)" />
+        <Metrics result={result.oneWay} label="Ida" unitSystem={unitSystem} />
+        <Metrics
+          result={result}
+          label="Redondo (sin cargar en destino)"
+          unitSystem={unitSystem}
+        />
       </article>
     )
   }
 
   return (
     <article className="result-card">
-      <Metrics result={result} />
+      <Metrics result={result} unitSystem={unitSystem} />
     </article>
   )
 }

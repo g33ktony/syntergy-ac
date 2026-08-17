@@ -9,8 +9,8 @@ import {
 import { presetRoutes } from './data/routes'
 import { getAllMultiFuelVehicles } from './data/vehicles-multifuel'
 import { DEFAULT_PRICE_PER_KWH, DEFAULT_PRICE_PER_LITER } from './lib/constants'
-import { loadCustomRoutes } from './lib/storage'
-import type { DriveStyle, Route, TripMode } from './types'
+import { loadCustomRoutes, loadUnitSystem } from './lib/storage'
+import type { DriveStyle, Route, TripMode, UnitSystem } from './types'
 import './App.css'
 
 const EMPTY_SLOT: SlotSelection = { vehicleId: '', versionId: '' }
@@ -34,6 +34,9 @@ function App() {
     EMPTY_SLOT,
   ])
   const [apiKeyEpoch, setApiKeyEpoch] = useState(0)
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(() =>
+    loadUnitSystem(),
+  )
 
   const allRoutes = useMemo(
     () => [...presetRoutes, ...customRoutes, ...googleRoutes],
@@ -74,7 +77,11 @@ function App() {
           Compara autonomía y costo de viaje entre vehículos eléctricos en
           México.
         </p>
-        <SettingsPanel onApiKeyChange={() => setApiKeyEpoch((n) => n + 1)} />
+        <SettingsPanel
+          onApiKeyChange={() => setApiKeyEpoch((n) => n + 1)}
+          unitSystem={unitSystem}
+          onUnitSystemChange={setUnitSystem}
+        />
       </header>
 
       <TripControls
@@ -112,6 +119,7 @@ function App() {
             driveStyle={driveStyle}
             pricePerKWh={pricePerKWh}
             pricePerLiter={pricePerLiter}
+            unitSystem={unitSystem}
           />
         ))}
       </section>
