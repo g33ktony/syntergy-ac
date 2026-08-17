@@ -24,8 +24,8 @@ export const MX_TOLL_CORRIDORS: MxTollCorridor[] = [
     name: 'México–Querétaro (57D)',
     aliasesA: ['cdmx', 'ciudad de mexico', 'mexico', 'cdmx, mx'],
     aliasesB: ['queretaro', 'querétaro'],
-    // 4 casetas, $385 total (post 13-abr-2026 increase).
-    costMxn: 385,
+    // CAPUFE auto total for México–Querétaro (13-abr-2026): $226.
+    costMxn: 226,
     bbox: [19.3, -100.6, 20.8, -98.9],
   },
   {
@@ -33,8 +33,10 @@ export const MX_TOLL_CORRIDORS: MxTollCorridor[] = [
     name: 'México–Puebla (150D)',
     aliasesA: ['cdmx', 'ciudad de mexico', 'mexico'],
     aliasesB: ['puebla'],
-    // 6 casetas, $460 total (post 13-abr-2026 increase).
-    costMxn: 460,
+    // CAPUFE auto total for México–Puebla (13-abr-2026): San Marcos $173
+    // + San Martín $53 = $226. Aggregator "6 casetas" sums double-count
+    // San Marcos / San Marcos Bis.
+    costMxn: 226,
     bbox: [18.9, -99.3, 19.5, -98.1],
   },
   {
@@ -50,8 +52,8 @@ export const MX_TOLL_CORRIDORS: MxTollCorridor[] = [
     name: 'México–Cuernavaca (95D)',
     aliasesA: ['cdmx', 'ciudad de mexico', 'mexico'],
     aliasesB: ['cuernavaca'],
-    // Sources split $108–$156 for the 2-caseta total; midpoint estimate.
-    costMxn: 150,
+    // CAPUFE auto total for México–Cuernavaca (13-abr-2026): $156.
+    costMxn: 156,
   },
   {
     id: 'cdmx-morelia',

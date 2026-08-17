@@ -275,7 +275,7 @@ export function VehicleSlot({
       </label>
 
       {showPhevRechargeToggle ? (
-        <fieldset className="field">
+        <fieldset className="mode-toggle">
           <legend>Recarga en destino</legend>
           <div
             className="segmented"

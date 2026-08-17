@@ -47,15 +47,12 @@ describe('MX_TOLL_CORRIDORS data integrity', () => {
     }
   })
 
-  // Recalibrated August 2026 against post-13-abr-2026 CAPUFE figures —
-  // pin the two corridors with a solid single-source "total route" quote
-  // so a future recalibration pass can't silently drift without updating
-  // both the value and this note.
+  // Recalibrated August 2026 against CAPUFE auto totals (13-abr-2026).
   it('pins the two corridors with a verified total-route quote', () => {
     const queretaro = MX_TOLL_CORRIDORS.find((c) => c.id === 'cdmx-queretaro')
     const puebla = MX_TOLL_CORRIDORS.find((c) => c.id === 'cdmx-puebla')
-    expect(queretaro?.costMxn).toBe(385)
-    expect(puebla?.costMxn).toBe(460)
+    expect(queretaro?.costMxn).toBe(226)
+    expect(puebla?.costMxn).toBe(226)
   })
 
   it('reflects that Guadalajara–Puerto Vallarta is one of the pricier corridors, not a short hop', () => {

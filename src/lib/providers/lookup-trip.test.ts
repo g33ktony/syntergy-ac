@@ -62,7 +62,7 @@ describe('lookupTrip', () => {
     expect(route.source).toBe('osm')
     expect(route.distanceKm).toBe(220)
     expect(route.tolls?.source).toBe('mx-table')
-    expect(route.tolls?.costMxn).toBe(385)
+    expect(route.tolls?.costMxn).toBe(226)
     expect(route.outbound?.path.length).toBeGreaterThan(0)
   })
 })

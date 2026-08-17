@@ -12,7 +12,7 @@ describe('estimateTolls', () => {
   it('matches a preset corridor by city names', () => {
     const result = estimateTolls({ from: 'CDMX', to: 'Querétaro' })
     expect(result.source).toBe('mx-table')
-    expect(result.costMxn).toBe(385)
+    expect(result.costMxn).toBe(226)
     expect(result.likelyTolls).toBe(true)
   })
 
@@ -22,7 +22,7 @@ describe('estimateTolls', () => {
       to: 'Puebla',
       roundTrip: true,
     })
-    expect(result.costMxn).toBe(920)
+    expect(result.costMxn).toBe(452)
   })
 
   it('keeps likelyTolls with zero cost when OSM/Google flagged cuota without a table hit', () => {
