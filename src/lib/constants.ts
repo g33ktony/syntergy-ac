@@ -56,3 +56,15 @@ export const ELEVATION_REGEN_RECOVERY = 0.65
 
 /** Extra fuel per 100 m of climb (ICE/HEV/PHEV fuel portion). No credit for descent. */
 export const ELEVATION_L_PER_100M_GAIN = 0.09
+
+/** Reference cruise speed for the aero/rolling consumption split. */
+export const SPEED_REF_KMH = 90
+export const SPEED_FACTOR_ROLLING = 0.6
+export const SPEED_FACTOR_AERO = 0.4
+export const MIN_SPEED_KMH = 40
+export const MAX_SPEED_KMH = 130
+
+/** Gasoline combustion (~2.31 kg CO₂ per liter). */
+export const CO2_KG_PER_LITER_GASOLINE = 2.31
+/** Approximate MX grid intensity (kg CO₂ per kWh). */
+export const CO2_KG_PER_KWH_MX_GRID = 0.4
