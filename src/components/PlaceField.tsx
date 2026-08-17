@@ -48,12 +48,14 @@ export function PlaceField({
       setHints([])
       return
     }
+    let active = true
     const handle = window.setTimeout(() => {
       void (async () => {
         try {
           if (hasGoogleApiKey()) {
             const key = getGoogleApiKey()!
             const predictions = await suggestPlaces(q, key)
+            if (!active) return
             setHints(
               predictions.map((p) => ({
                 label: p.description,
@@ -62,6 +64,7 @@ export function PlaceField({
             )
           } else {
             const photon = await photonSuggest(q)
+            if (!active) return
             setHints(photon.map((p) => ({ label: p.label, latlng: p.latlng })))
           }
         } catch {
@@ -69,7 +72,10 @@ export function PlaceField({
         }
       })()
     }, 350)
-    return () => window.clearTimeout(handle)
+    return () => {
+      active = false
+      window.clearTimeout(handle)
+    }
   }, [value, focused])
 
   async function pick(hint: { label: string; latlng?: LatLng; placeId?: string }) {
