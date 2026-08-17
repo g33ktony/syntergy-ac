@@ -70,10 +70,6 @@ function Metrics({
             {formatTripUnits(result.litersUsed, 'volume', unitSystem)}
           </dd>
         </div>
-        <div className="metric-total">
-          <dt>Costo</dt>
-          <dd>{formatMxn(result.costMxn)}</dd>
-        </div>
         <div>
           <dt>% tanque al llegar</dt>
           <dd className={result.reachesWithoutStop ? 'soc-ok' : 'soc-low'}>
@@ -94,6 +90,10 @@ function Metrics({
               ? 'Solo eléctrico'
               : `Eléctrico + ${fuelWord}`}
           </dd>
+        </div>
+        <div className="metric-total">
+          <dt>Costo</dt>
+          <dd>{formatMxn(result.costMxn)}</dd>
         </div>
       </dl>
     </div>

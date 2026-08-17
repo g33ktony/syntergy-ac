@@ -162,7 +162,7 @@ Sin esquinas redondeadas en ningún componente (`rounded: none` en todo el siste
 ### Ticket line items (`.metrics dl`)
 - **Style:** grid de 3 columnas explícitas por fila (etiqueta / línea punteada de relleno / valor), nunca flexbox anidado con pseudo-elementos — ver nota de Layout sobre por qué
 - **Value column:** `minmax(0, 1fr)` — no `max-content`. Cadenas largas (`requiere parada de reabastecimiento`) deben envolver, no empujar el ticket
-- **Total row:** doble regla superior, tipografía a 1.5rem en acento rojo — la única fila que rompe la jerarquía de datos normal
+- **Total row:** última línea del ticket — doble regla superior, tipografía a 1.5rem en acento rojo. Nunca en medio de Distancia / SoC / paradas.
 
 ## Do's and Don'ts
 

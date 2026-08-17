@@ -64,10 +64,6 @@ function Metrics({
           <dt>Energía</dt>
           <dd>{formatTripUnits(result.energyKWh, 'energy', unitSystem)}</dd>
         </div>
-        <div className="metric-total">
-          <dt>Costo</dt>
-          <dd>{formatMxn(result.costMxn)}</dd>
-        </div>
         <div>
           <dt>% batería al llegar</dt>
           <dd
@@ -93,6 +89,10 @@ function Metrics({
         <div>
           <dt>Conector</dt>
           <dd>{result.connector}</dd>
+        </div>
+        <div className="metric-total">
+          <dt>Costo</dt>
+          <dd>{formatMxn(result.costMxn)}</dd>
         </div>
       </dl>
     </div>
