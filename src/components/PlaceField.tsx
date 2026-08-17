@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getGoogleApiKey, hasGoogleApiKey } from '../lib/config'
 import { geocodePlace, suggestPlaces } from '../lib/google'
 import { photonSuggest } from '../lib/providers/photon'
@@ -19,23 +19,44 @@ export function PlaceField({
   onResolved,
   placeholder,
 }: PlaceFieldProps) {
-  const listId = useId()
   const [hints, setHints] = useState<Array<{ label: string; latlng?: LatLng; placeId?: string }>>(
     [],
   )
+  const [focused, setFocused] = useState(false)
+  const fieldRef = useRef<HTMLLabelElement>(null)
+  const blurTimer = useRef<number | undefined>(undefined)
+  const suppressUntilTyped = useRef(false)
+  const pickGeneration = useRef(0)
 
   useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!fieldRef.current?.contains(event.target as Node)) {
+        setFocused(false)
+        setHints([])
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [])
+
+  useEffect(() => {
+    if (!focused || suppressUntilTyped.current) {
+      setHints([])
+      return
+    }
     const q = value.trim()
     if (q.length < 3) {
       setHints([])
       return
     }
+    let active = true
     const handle = window.setTimeout(() => {
       void (async () => {
         try {
           if (hasGoogleApiKey()) {
             const key = getGoogleApiKey()!
             const predictions = await suggestPlaces(q, key)
+            if (!active) return
             setHints(
               predictions.map((p) => ({
                 label: p.description,
@@ -44,18 +65,26 @@ export function PlaceField({
             )
           } else {
             const photon = await photonSuggest(q)
+            if (!active) return
             setHints(photon.map((p) => ({ label: p.label, latlng: p.latlng })))
           }
         } catch {
+          if (!active) return
           setHints([])
         }
       })()
     }, 350)
-    return () => window.clearTimeout(handle)
-  }, [value])
+    return () => {
+      active = false
+      window.clearTimeout(handle)
+    }
+  }, [value, focused])
 
   async function pick(hint: { label: string; latlng?: LatLng; placeId?: string }) {
+    const generation = ++pickGeneration.current
+    suppressUntilTyped.current = true
     onChange(hint.label)
+    setFocused(false)
     setHints([])
     if (hint.latlng) {
       onResolved?.(hint.label, hint.latlng)
@@ -65,6 +94,7 @@ export function PlaceField({
     if (!key) return
     try {
       const latlng = await geocodePlace(hint.label, key)
+      if (generation !== pickGeneration.current) return
       onResolved?.(hint.label, latlng)
     } catch {
       /* lookup form still works with the string */
@@ -72,20 +102,45 @@ export function PlaceField({
   }
 
   return (
-    <label className="field place-field">
+    <label ref={fieldRef} className="field place-field">
       <span>{label}</span>
       <input
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          pickGeneration.current += 1
+          suppressUntilTyped.current = false
+          setFocused(true)
+          onChange(e.target.value)
+        }}
+        onFocus={() => {
+          if (blurTimer.current !== undefined) window.clearTimeout(blurTimer.current)
+          setFocused(true)
+        }}
+        onBlur={() => {
+          blurTimer.current = window.setTimeout(() => {
+            setFocused(false)
+            setHints([])
+          }, 150)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            setFocused(false)
+            setHints([])
+            e.currentTarget.blur()
+          }
+        }}
         placeholder={placeholder}
         autoComplete="off"
-        list={listId}
       />
-      {hints.length > 0 ? (
+      {focused && hints.length > 0 ? (
         <ul className="place-suggestions" role="listbox">
           {hints.map((hint) => (
             <li key={hint.placeId ?? hint.label}>
-              <button type="button" onClick={() => void pick(hint)}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => void pick(hint)}
+              >
                 {hint.label}
               </button>
             </li>

@@ -31,9 +31,7 @@ function App() {
     loadCustomRoutes(),
   )
   const [googleRoutes, setGoogleRoutes] = useState<Route[]>([])
-  const [selectedRouteId, setSelectedRouteId] = useState(
-    () => presetRoutes[0]?.id ?? '',
-  )
+  const [selectedRouteId, setSelectedRouteId] = useState('')
   const [mode, setMode] = useState<TripMode>('oneWay')
   const [driveStyle, setDriveStyle] = useState<DriveStyle>('normal')
   const [pricePerKWh, setPricePerKWh] = useState(DEFAULT_PRICE_PER_KWH)
@@ -81,7 +79,7 @@ function App() {
     if (selectedRouteId.startsWith('custom-')) {
       const stillThere = routes.some((r) => r.id === selectedRouteId)
       if (!stillThere) {
-        setSelectedRouteId(presetRoutes[0]?.id ?? '')
+        setSelectedRouteId('')
       }
     }
   }
@@ -103,10 +101,20 @@ function App() {
         />
       </header>
 
+      <RouteComposer
+        customRoutes={customRoutes}
+        onCustomRoutesChange={handleCustomRoutesChange}
+        onRouteCreated={handleCustomRouteCreated}
+        onSelectPreset={(route) => setSelectedRouteId(route.id)}
+        onLookedUpRoute={handleLookedUpRoute}
+        mode={mode}
+        routeSourcePreference={routeSourcePreference}
+        apiKeyEpoch={apiKeyEpoch}
+        selectedRoute={selectedRoute}
+        onSelectedRouteChange={handleSelectedRouteChange}
+      />
+
       <TripControls
-        routes={allRoutes}
-        selectedRouteId={selectedRouteId}
-        onSelectRouteId={setSelectedRouteId}
         mode={mode}
         onModeChange={setMode}
         driveStyle={driveStyle}
@@ -118,18 +126,6 @@ function App() {
         unitSystem={unitSystem}
         onApplySuggestedPrice={setPricePerKWh}
         selectedRoute={selectedRoute}
-      />
-
-      <RouteComposer
-        customRoutes={customRoutes}
-        onCustomRoutesChange={handleCustomRoutesChange}
-        onRouteCreated={handleCustomRouteCreated}
-        onLookedUpRoute={handleLookedUpRoute}
-        mode={mode}
-        routeSourcePreference={routeSourcePreference}
-        apiKeyEpoch={apiKeyEpoch}
-        selectedRoute={selectedRoute}
-        onSelectedRouteChange={handleSelectedRouteChange}
       />
 
       <section className="slots" aria-label="Comparación de vehículos">

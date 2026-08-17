@@ -5,9 +5,10 @@ import { lookupTripFromConfig } from '../lib/providers/lookup-trip'
 import { photonReverse } from '../lib/providers/photon'
 import { reverseGeocode } from '../lib/google'
 import { getGoogleApiKey } from '../lib/config'
+import { createDebouncedTask } from '../lib/debounced-task'
 import { formatMxn } from '../lib/format'
 import { applyTollOverride } from '../lib/tolls'
-import { routeLabel } from '../data/routes'
+import { presetRoutes, routeLabel } from '../data/routes'
 import type { LatLng, Route, RouteSourcePreference, TripMode } from '../types'
 import { MapView } from './MapView'
 import { PlaceField } from './PlaceField'
@@ -16,6 +17,7 @@ type RouteComposerProps = {
   customRoutes: Route[]
   onCustomRoutesChange: (routes: Route[]) => void
   onRouteCreated?: (route: Route) => void
+  onSelectPreset?: (route: Route) => void
   onLookedUpRoute: (route: Route) => void
   mode: TripMode
   routeSourcePreference: RouteSourcePreference
@@ -28,6 +30,7 @@ export function RouteComposer({
   customRoutes,
   onCustomRoutesChange,
   onRouteCreated,
+  onSelectPreset,
   onLookedUpRoute,
   mode,
   routeSourcePreference,
@@ -45,7 +48,12 @@ export function RouteComposer({
   const [error, setError] = useState<string | null>(null)
   const [showManual, setShowManual] = useState(false)
   const [manualKm, setManualKm] = useState('')
-  const debounceRef = useRef<number | null>(null)
+  const pinLookupDebounce = useRef(createDebouncedTask())
+
+  useEffect(() => {
+    const debounce = pinLookupDebounce.current
+    return () => debounce.cancel()
+  }, [])
 
   async function runLookup(nextFrom: string, nextTo: string, o?: LatLng, d?: LatLng) {
     if (!nextFrom.trim() || !nextTo.trim()) {
@@ -82,14 +90,14 @@ export function RouteComposer({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    pinLookupDebounce.current.cancel()
     void runLookup(from, to, origin, dest)
   }
 
   function handlePinsChange(nextOrigin: LatLng, nextDest: LatLng) {
     setOrigin(nextOrigin)
     setDest(nextDest)
-    if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    debounceRef.current = window.setTimeout(() => {
+    pinLookupDebounce.current.schedule((isStale) => {
       void (async () => {
         const key = getGoogleApiKey()
         const [fromLabel, toLabel] = await Promise.all([
@@ -104,6 +112,7 @@ export function RouteComposer({
                 () => `${nextDest.lat.toFixed(4)}, ${nextDest.lng.toFixed(4)}`,
               ),
         ])
+        if (isStale()) return
         setFrom(fromLabel)
         setTo(toLabel)
         await runLookup(fromLabel, toLabel, nextOrigin, nextDest)
@@ -134,6 +143,17 @@ export function RouteComposer({
     onCustomRoutesChange(next)
   }
 
+  /** Presets/custom have city names; drop leftover pin coords from a prior lookup. */
+  function applyNamedRoute(route: Route) {
+    pinLookupDebounce.current.cancel()
+    setFrom(route.from)
+    setTo(route.to)
+    setOrigin(route.origin)
+    setDest(route.dest)
+    setError(null)
+    onSelectPreset?.(route)
+  }
+
   const outboundPath = selectedRoute?.outbound?.path
   const inboundPath = selectedRoute?.inbound?.path
   const mapOrigin = origin ?? selectedRoute?.origin
@@ -141,12 +161,26 @@ export function RouteComposer({
 
   return (
     <section className="route-manager" aria-labelledby="route-manager-heading">
-      <h2 id="route-manager-heading">Agregar ruta</h2>
+      <h2 id="route-manager-heading">Ruta</h2>
       <p className="section-lead">
-        Elige origen y destino. Los km, elevación, casetas y cargadores salen
-        del mapa
+        Primero elige origen y destino. Los km, elevación, casetas y cargadores
+        salen del mapa
         {useGoogle ? ' (Google).' : ' (OSM/OSRM público; puede ser inestable).'}
       </p>
+
+      <div className="preset-chips" aria-label="Rutas frecuentes">
+        <span>Rutas frecuentes</span>
+        {presetRoutes.map((route) => (
+          <button
+            key={route.id}
+            type="button"
+            className="preset-chip"
+            onClick={() => applyNamedRoute(route)}
+          >
+            {routeLabel(route)}
+          </button>
+        ))}
+      </div>
 
       {!useGoogle ? (
         <p className="form-hint" role="status">
@@ -163,7 +197,10 @@ export function RouteComposer({
         <PlaceField
           label="Desde"
           value={from}
-          onChange={setFrom}
+          onChange={(value) => {
+            setFrom(value)
+            setOrigin(undefined)
+          }}
           placeholder="Ej. CDMX"
           onResolved={(label, latlng) => {
             setFrom(label)
@@ -173,7 +210,10 @@ export function RouteComposer({
         <PlaceField
           label="Hasta"
           value={to}
-          onChange={setTo}
+          onChange={(value) => {
+            setTo(value)
+            setDest(undefined)
+          }}
           placeholder="Ej. Querétaro"
           onResolved={(label, latlng) => {
             setTo(label)
@@ -278,7 +318,13 @@ export function RouteComposer({
         <ul className="custom-route-list">
           {customRoutes.map((route) => (
             <li key={route.id}>
-              <span>{routeLabel(route)}</span>
+              <button
+                type="button"
+                className="btn-text"
+                onClick={() => applyNamedRoute(route)}
+              >
+                {routeLabel(route)}
+              </button>
               <button
                 type="button"
                 className="btn-text"
