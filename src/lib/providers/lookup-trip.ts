@@ -23,11 +23,9 @@ function routingProviders(options: LookupTripOptions): RouteProvider[] {
   const googleKey = options.googleKey
   const orsKey = options.orsKey
   const preference = options.preference
-  const wantsGoogle = preference === 'google' || preference === 'both'
   const providers: RouteProvider[] = []
-  if (googleKey && (wantsGoogle || preference === 'abrp')) {
-    // Even ABRP-only still needs geometry; Google is preferred when present.
-    if (wantsGoogle) providers.push(createGoogleProvider(googleKey))
+  if (usesGoogleGeometry(preference, googleKey) && googleKey) {
+    providers.push(createGoogleProvider(googleKey))
   }
   if (providers.length === 0) {
     providers.push(createOsmProvider(orsKey))
@@ -36,6 +34,15 @@ function routingProviders(options: LookupTripOptions): RouteProvider[] {
   const wantsAbrp = preference === 'abrp' || preference === 'both'
   if (wantsAbrp && abrpKey) providers.push(createAbrpProvider(abrpKey))
   return providers
+}
+
+/** ABRP-only still needs geometry; Google is preferred when a key is present. */
+export function usesGoogleGeometry(
+  preference: RouteSourcePreference,
+  googleKey?: string | null,
+): boolean {
+  if (!googleKey) return false
+  return preference === 'google' || preference === 'both' || preference === 'abrp'
 }
 
 /**
@@ -70,7 +77,6 @@ export async function lookupTrip(options: LookupTripOptions): Promise<Route> {
     to: route.to,
     path,
     likelyTolls: route.likelyTolls,
-    roundTrip: Boolean(query.roundTrip),
   })
 
   try {

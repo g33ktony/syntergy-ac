@@ -4,7 +4,7 @@ import {
   formatAvgSpeedRow,
   formatElevationRow,
   formatTripUnits,
-  roundTripElevation,
+  displayRoundTripElevation,
 } from '../lib/units'
 
 type ResultCardProps = {
@@ -145,13 +145,12 @@ export function ResultCard({
   returnElevationLossM,
 }: ResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
-    const roundTrip = roundTripElevation(elevationGainM, elevationLossM)
-    const rtGain = returnElevationGainM != null
-      ? (elevationGainM ?? 0) + returnElevationGainM
-      : roundTrip.gainM
-    const rtLoss = returnElevationLossM != null
-      ? (elevationLossM ?? 0) + returnElevationLossM
-      : roundTrip.lossM
+    const roundTrip = displayRoundTripElevation(
+      elevationGainM,
+      elevationLossM,
+      returnElevationGainM,
+      returnElevationLossM,
+    )
     return (
       <article className="result-card">
         <Metrics
@@ -169,8 +168,8 @@ export function ResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
-          elevationGainM={rtGain}
-          elevationLossM={rtLoss}
+          elevationGainM={roundTrip.gainM}
+          elevationLossM={roundTrip.lossM}
         />
       </article>
     )

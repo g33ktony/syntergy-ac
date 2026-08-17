@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyTollOverride, estimateTolls } from './tolls'
+import { applyTollOverride, estimateTolls, tollCostForTripMode } from './tolls'
 
 describe('estimateTolls', () => {
   it('returns zero when there is no match and no cuota signal', () => {
@@ -34,6 +34,12 @@ describe('estimateTolls', () => {
     expect(result.likelyTolls).toBe(true)
     expect(result.costMxn).toBe(0)
     expect(result.source).toBe('osm')
+  })
+
+  it('scales a stored one-way caseta total by the current trip mode', () => {
+    expect(tollCostForTripMode(226, 'oneWay')).toBe(226)
+    expect(tollCostForTripMode(226, 'roundTrip')).toBe(452)
+    expect(tollCostForTripMode(undefined, 'roundTrip')).toBeUndefined()
   })
 
   it('applies a manual override', () => {

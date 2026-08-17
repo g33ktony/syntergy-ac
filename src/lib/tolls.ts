@@ -1,5 +1,5 @@
 import { MX_TOLL_CORRIDORS, type MxTollCorridor } from '../data/mx-tolls'
-import type { LatLng, TollEstimate } from '../types'
+import type { LatLng, TollEstimate, TripMode } from '../types'
 
 function normalize(name: string): string {
   return name
@@ -93,4 +93,13 @@ export function applyTollOverride(
     costMxn,
     source: 'manual',
   }
+}
+
+/** Lookup stores one-way casetas; scale here so ida/redondo can change without a new fetch. */
+export function tollCostForTripMode(
+  oneWayMxn: number | undefined,
+  mode: TripMode,
+): number | undefined {
+  if (oneWayMxn == null) return undefined
+  return mode === 'roundTrip' ? oneWayMxn * 2 : oneWayMxn
 }

@@ -1,10 +1,10 @@
 import type { PhevTripResult, PhevTripResultBase, TripMode, UnitSystem } from '../types'
 import { formatHours, formatLocaleNumber, formatMxn, fuelTypeLabel } from '../lib/format'
 import {
+  displayRoundTripElevation,
   formatAvgSpeedRow,
   formatElevationRow,
   formatTripUnits,
-  roundTripElevation,
 } from '../lib/units'
 
 type PhevResultCardProps = {
@@ -140,9 +140,16 @@ export function PhevResultCard({
   avgTravelSpeedKmh,
   elevationGainM,
   elevationLossM,
+  returnElevationGainM,
+  returnElevationLossM,
 }: PhevResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
-    const roundTrip = roundTripElevation(elevationGainM, elevationLossM)
+    const roundTrip = displayRoundTripElevation(
+      elevationGainM,
+      elevationLossM,
+      returnElevationGainM,
+      returnElevationLossM,
+    )
     return (
       <article className="result-card">
         <Metrics

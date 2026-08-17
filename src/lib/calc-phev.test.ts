@@ -232,9 +232,9 @@ describe('calcPhevTrip', () => {
       elevationGainM: 900,
     })
 
-    // Trip blends electric (first ~68 km) then fuel (remainder) — climbing
-    // should raise both the electric energy and the fuel used.
-    expect(climbing.energyKWh).toBeGreaterThan(flat.energyKWh)
+    // Trip blends electric (first ~68 km) then fuel (remainder). Climb
+    // cannot push pack energy past batteryKWh; extra demand spills to fuel.
+    expect(climbing.energyKWh).toBeLessThanOrEqual(version.batteryKWh)
     expect(climbing.litersUsed).toBeGreaterThan(flat.litersUsed)
   })
 
@@ -262,5 +262,22 @@ describe('calcPhevTrip', () => {
     // Return leg is fuel-only (no recharge) and climbs the 500 m back with
     // no descent credit — total liters must exceed the flat baseline.
     expect(downhillOneWay.litersUsed).toBeGreaterThan(flat.litersUsed)
+  })
+
+  it('caps electric energy at pack size and spills climb overflow to fuel', () => {
+    const version = ravFourPrime()
+    const result = calcPhevTrip({
+      distanceKm: 80,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay',
+      elevationGainM: 5000,
+    })
+
+    expect(result.energyKWh).toBeLessThanOrEqual(version.batteryKWh)
+    expect(result.usedElectricOnly).toBe(false)
+    expect(result.litersUsed).toBeGreaterThan(0)
   })
 })

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
 import { RESERVE_PERCENT } from '../lib/constants'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
+import { tollCostForTripMode } from '../lib/tolls'
 import type {
   AnyVehicle,
   AnyVersion,
@@ -74,7 +75,7 @@ function calcResultForVehicle(
         returnElevationLossM: route.inbound?.elevationLossM,
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
-        tollCostMxn: route.tolls?.costMxn,
+        tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
       })
     }
     case 'ICE':
@@ -95,7 +96,7 @@ function calcResultForVehicle(
         returnElevationLossM: route.inbound?.elevationLossM,
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
-        tollCostMxn: route.tolls?.costMxn,
+        tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
       })
     }
     case 'PHEV': {
@@ -116,7 +117,7 @@ function calcResultForVehicle(
         returnElevationLossM: route.inbound?.elevationLossM,
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
-        tollCostMxn: route.tolls?.costMxn,
+        tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
         rechargeAtDestination: phevRechargeAtDestination,
       })
     }

@@ -65,8 +65,8 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
       ? (version.batteryKWh / evConsumptionEffective) * 100
       : 0
 
-  const electricKmUsed = Math.min(distanceKm, electricRangeEffective)
-  const fuelKmUsed = Math.max(0, distanceKm - electricRangeEffective)
+  let electricKmUsed = Math.min(distanceKm, electricRangeEffective)
+  let fuelKmUsed = Math.max(0, distanceKm - electricRangeEffective)
   const baseEnergyKWh = (electricKmUsed * evConsumptionEffective) / 100
 
   const consumptionEffective =
@@ -75,7 +75,7 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
 
   const electricShare = distanceKm > 0 ? electricKmUsed / distanceKm : 0
   const fuelShare = distanceKm > 0 ? fuelKmUsed / distanceKm : 0
-  const energyKWh = Math.max(
+  let energyKWh = Math.max(
     0,
     baseEnergyKWh +
       elevationEnergyDeltaKWh(
@@ -84,10 +84,27 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
         electricShare,
       ),
   )
-  const litersUsed = Math.max(
+  let litersUsed = Math.max(
     0,
     baseLiters + elevationFuelDeltaLiters(input.elevationGainM, fuelShare),
   )
+
+  if (energyKWh > version.batteryKWh) {
+    const overflowKWh = energyKWh - version.batteryKWh
+    energyKWh = version.batteryKWh
+    const overflowKm =
+      evConsumptionEffective > 0
+        ? (overflowKWh / evConsumptionEffective) * 100
+        : 0
+    electricKmUsed = Math.max(0, electricKmUsed - overflowKm)
+    fuelKmUsed = Math.max(0, distanceKm - electricKmUsed)
+    const overflowFuelShare = distanceKm > 0 ? fuelKmUsed / distanceKm : 0
+    litersUsed = Math.max(
+      0,
+      (fuelKmUsed * consumptionEffective) / 100 +
+        elevationFuelDeltaLiters(input.elevationGainM, overflowFuelShare),
+    )
+  }
 
   return attachTripCosts(
     withTankMetrics(

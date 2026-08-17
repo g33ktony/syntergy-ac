@@ -137,6 +137,22 @@ export function roundTripElevation(
   return { gainM: total, lossM: total }
 }
 
+/** Prefer measured inbound elevation; otherwise assume the return mirrors outbound. */
+export function displayRoundTripElevation(
+  outboundGainM?: number,
+  outboundLossM?: number,
+  returnGainM?: number,
+  returnLossM?: number,
+): { gainM: number | undefined; lossM: number | undefined } {
+  if (returnGainM != null || returnLossM != null) {
+    return {
+      gainM: (outboundGainM ?? 0) + (returnGainM ?? 0),
+      lossM: (outboundLossM ?? 0) + (returnLossM ?? 0),
+    }
+  }
+  return roundTripElevation(outboundGainM, outboundLossM)
+}
+
 export function formatElevationRow(
   gainM: number | undefined,
   lossM: number | undefined,

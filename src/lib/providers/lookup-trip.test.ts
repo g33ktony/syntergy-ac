@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { lookupTrip } from './lookup-trip'
+import { lookupTrip, usesGoogleGeometry } from './lookup-trip'
 
 function jsonResponse(body: unknown) {
   return { ok: true, status: 200, json: async () => body }
@@ -64,5 +64,18 @@ describe('lookupTrip', () => {
     expect(route.tolls?.source).toBe('mx-table')
     expect(route.tolls?.costMxn).toBe(226)
     expect(route.outbound?.path.length).toBeGreaterThan(0)
+  })
+})
+
+describe('usesGoogleGeometry', () => {
+  it('uses Google for ABRP-only when a Google key is present', () => {
+    expect(usesGoogleGeometry('abrp', 'key')).toBe(true)
+    expect(usesGoogleGeometry('google', 'key')).toBe(true)
+    expect(usesGoogleGeometry('both', 'key')).toBe(true)
+  })
+
+  it('does not use Google without a key', () => {
+    expect(usesGoogleGeometry('abrp', null)).toBe(false)
+    expect(usesGoogleGeometry('google', undefined)).toBe(false)
   })
 })

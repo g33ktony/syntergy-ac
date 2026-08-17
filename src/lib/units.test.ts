@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_HIGHWAY_KMH } from './constants'
 import {
+  displayRoundTripElevation,
   formatAvgSpeedRow,
   formatElevationRow,
   formatTripUnits,
@@ -67,6 +68,21 @@ describe('resolveAvgSpeedKmh', () => {
     expect(row.label).toBe('Vel. promedio')
     expect(row.value).toContain('mph')
     expect(row.value).toContain('estimada')
+  })
+})
+
+describe('displayRoundTripElevation', () => {
+  it('sums real inbound gain/loss when present', () => {
+    expect(
+      displayRoundTripElevation(400, 100, 80, 420),
+    ).toEqual({ gainM: 480, lossM: 520 })
+  })
+
+  it('falls back to the swap heuristic without inbound data', () => {
+    expect(displayRoundTripElevation(400, 100)).toEqual({
+      gainM: 500,
+      lossM: 500,
+    })
   })
 })
 
