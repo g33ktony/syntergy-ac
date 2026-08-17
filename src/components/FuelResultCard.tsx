@@ -40,7 +40,7 @@ function Metrics({
           <dd>{formatHours(result.driveHours)}</dd>
         </div>
         <div>
-          <dt>Combustible</dt>
+          <dt>Combustible usado</dt>
           <dd>{formatNumber(result.litersUsed)} L</dd>
         </div>
         <div>
@@ -61,7 +61,7 @@ function Metrics({
           <dd>{result.fuelStopsEstimate}</dd>
         </div>
         <div>
-          <dt>Combustible</dt>
+          <dt>Tipo de combustible</dt>
           <dd>{result.fuel === 'gasolina' ? 'Gasolina' : 'Diésel'}</dd>
         </div>
       </dl>
