@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_HIGHWAY_KMH } from './constants'
 import {
+  displayRoundTripElevation,
   formatAvgSpeedRow,
+  formatElevationRow,
   formatTripUnits,
   kmhToMph,
   kmToMi,
@@ -66,6 +68,38 @@ describe('resolveAvgSpeedKmh', () => {
     expect(row.label).toBe('Vel. promedio')
     expect(row.value).toContain('mph')
     expect(row.value).toContain('estimada')
+  })
+})
+
+describe('displayRoundTripElevation', () => {
+  it('sums real inbound gain/loss when present', () => {
+    expect(
+      displayRoundTripElevation(400, 100, 80, 420),
+    ).toEqual({ gainM: 480, lossM: 520 })
+  })
+
+  it('falls back to the swap heuristic without inbound data', () => {
+    expect(displayRoundTripElevation(400, 100)).toEqual({
+      gainM: 500,
+      lossM: 500,
+    })
+  })
+})
+
+describe('formatElevationRow', () => {
+  it('returns null when no elevation data exists', () => {
+    expect(formatElevationRow(undefined, undefined, 'metric')).toBeNull()
+  })
+
+  it('formats gain/loss in metric', () => {
+    const row = formatElevationRow(450, 380, 'metric')
+    expect(row?.label).toBe('Elevación')
+    expect(row?.value).toBe('+450 m / -380 m')
+  })
+
+  it('formats gain/loss in imperial', () => {
+    const row = formatElevationRow(100, 0, 'imperial')
+    expect(row?.value).toContain('ft')
   })
 })
 

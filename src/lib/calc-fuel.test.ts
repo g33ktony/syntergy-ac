@@ -144,4 +144,49 @@ describe('calcFuelTrip ICE/HEV', () => {
     expect(result.reachesWithoutStop).toBe(false)
     expect(result.fuelStopsEstimate).toBeGreaterThan(0)
   })
+
+  it('adds elevation-adjusted fuel on a one-way climb', () => {
+    const version = virtus()
+    const flat = calcFuelTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerLiter: 24,
+      mode: 'oneWay',
+    })
+    const climbing = calcFuelTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerLiter: 24,
+      mode: 'oneWay',
+      elevationGainM: 800,
+    })
+
+    expect(climbing.litersUsed).toBeGreaterThan(flat.litersUsed)
+  })
+
+  it('round trip climbs the descent back — total gain equals gain+loss', () => {
+    const version = virtus()
+    const flat = calcFuelTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+    })
+    const downhillOneWay = calcFuelTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerLiter: 24,
+      mode: 'roundTrip',
+      elevationGainM: 0,
+      elevationLossM: 500,
+    })
+
+    // Liquid fuel gets no descent credit — round trip must cost strictly
+    // more than flat once the return leg climbs the 500 m back.
+    expect(downhillOneWay.litersUsed).toBeGreaterThan(flat.litersUsed)
+  })
 })

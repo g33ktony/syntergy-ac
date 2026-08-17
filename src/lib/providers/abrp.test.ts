@@ -24,7 +24,7 @@ describe('createAbrpProvider', () => {
     )
 
     const provider = createAbrpProvider('test-key')
-    const result = await provider.lookup('CDMX', 'Querétaro')
+    const result = await provider.lookup({ from: 'CDMX', to: 'Querétaro' })
 
     expect(result.provider).toBe('abrp')
     expect(result.distanceKm).toBe(220)
@@ -36,7 +36,7 @@ describe('createAbrpProvider', () => {
 
   it('throws a Spanish error when no API key is given', async () => {
     const provider = createAbrpProvider('')
-    await expect(provider.lookup('CDMX', 'Querétaro')).rejects.toThrow(
+    await expect(provider.lookup({ from: 'CDMX', to: 'Querétaro' })).rejects.toThrow(
       'No hay API key de ABRP configurada.',
     )
   })
@@ -47,7 +47,7 @@ describe('createAbrpProvider', () => {
       vi.fn(async () => ({ ok: false, status: 401 })),
     )
     const provider = createAbrpProvider('bad-key')
-    await expect(provider.lookup('CDMX', 'Querétaro')).rejects.toThrow(
+    await expect(provider.lookup({ from: 'CDMX', to: 'Querétaro' })).rejects.toThrow(
       /ABRP respondió con error \(401\)/,
     )
   })
@@ -60,7 +60,7 @@ describe('createAbrpProvider', () => {
       }),
     )
     const provider = createAbrpProvider('test-key')
-    await expect(provider.lookup('CDMX', 'Querétaro')).rejects.toThrow(
+    await expect(provider.lookup({ from: 'CDMX', to: 'Querétaro' })).rejects.toThrow(
       'No se pudo contactar a ABRP',
     )
   })
@@ -71,7 +71,7 @@ describe('createAbrpProvider', () => {
       vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) })),
     )
     const provider = createAbrpProvider('test-key')
-    await expect(provider.lookup('CDMX', 'Querétaro')).rejects.toThrow(
+    await expect(provider.lookup({ from: 'CDMX', to: 'Querétaro' })).rejects.toThrow(
       'ABRP no devolvió una distancia válida.',
     )
   })
@@ -80,7 +80,7 @@ describe('createAbrpProvider', () => {
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
     const provider = createAbrpProvider('test-key')
-    await expect(provider.lookup('  ', 'Querétaro')).rejects.toThrow(
+    await expect(provider.lookup({ from: '  ', to: 'Querétaro' })).rejects.toThrow(
       'Indica ciudad de origen y destino',
     )
     expect(fetchSpy).not.toHaveBeenCalled()

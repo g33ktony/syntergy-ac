@@ -102,4 +102,103 @@ describe('calcTrip BEV', () => {
     expect(result.arrivalSocPercent).toBeLessThan(RESERVE_PERCENT)
     expect(result.reachesWithReserve).toBe(false)
   })
+
+  it('adds elevation-adjusted energy on a one-way climb', () => {
+    const version = dolphinPlus()
+    const flat = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'oneWay',
+    })
+    const climbing = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'oneWay',
+      elevationGainM: 800,
+      elevationLossM: 0,
+    })
+
+    expect(climbing.energyKWh).toBeGreaterThan(flat.energyKWh)
+  })
+
+  it('round trip elevation is gain+loss both ways, not the one-way delta doubled', () => {
+    const version = dolphinPlus()
+    // Mostly downhill one-way (regen credit) — the return leg climbs it
+    // back, so round trip must NOT be cheaper than round trip with no
+    // elevation data at all.
+    const flat = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+    })
+    const downhillOneWay = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+      elevationGainM: 0,
+      elevationLossM: 500,
+    })
+
+    // Regen never fully recovers descent energy, and the return leg pays
+    // to climb the same 500 m back — round trip must cost more energy
+    // than flat, even though the one-way leg alone would look cheaper.
+    expect(downhillOneWay.energyKWh).toBeGreaterThan(flat.energyKWh)
+  })
+
+  it('adds casetas to totalCostMxn without changing energy costMxn', () => {
+    const version = dolphinPlus()
+    const result = calcTrip({
+      distanceKm: 120,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'oneWay',
+      tollCostMxn: 320,
+    })
+    expect(result.costMxn).toBeCloseTo(19.2, 5)
+    expect(result.tollCostMxn).toBe(320)
+    expect(result.totalCostMxn).toBeCloseTo(339.2, 5)
+  })
+
+  it('uses a real inbound elevation profile when provided', () => {
+    const version = dolphinPlus()
+    const swapped = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+      elevationGainM: 400,
+      elevationLossM: 50,
+    })
+    const inbound = calcTrip({
+      distanceKm: 100,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'roundTrip',
+      elevationGainM: 400,
+      elevationLossM: 50,
+      returnElevationGainM: 10,
+      returnElevationLossM: 20,
+      returnDistanceKm: 110,
+    })
+    expect(inbound.distanceKm).toBe(210)
+    expect(inbound.energyKWh).not.toBeCloseTo(swapped.energyKWh, 5)
+  })
 })

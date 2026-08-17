@@ -2,11 +2,17 @@ import { useState, type FormEvent } from 'react'
 import {
   clearStoredAbrpApiKey,
   clearStoredApiKey,
+  clearStoredOcmApiKey,
+  clearStoredOrsApiKey,
   loadStoredAbrpApiKey,
   loadStoredApiKey,
+  loadStoredOcmApiKey,
+  loadStoredOrsApiKey,
   saveRouteSourcePreference,
   saveStoredAbrpApiKey,
   saveStoredApiKey,
+  saveStoredOcmApiKey,
+  saveStoredOrsApiKey,
   saveUnitSystem,
 } from '../lib/storage'
 import type { RouteSourcePreference, UnitSystem } from '../types'
@@ -31,6 +37,10 @@ export function SettingsPanel({
   const [savedHint, setSavedHint] = useState<string | null>(null)
   const [abrpDraft, setAbrpDraft] = useState(() => loadStoredAbrpApiKey() ?? '')
   const [abrpSavedHint, setAbrpSavedHint] = useState<string | null>(null)
+  const [orsDraft, setOrsDraft] = useState(() => loadStoredOrsApiKey() ?? '')
+  const [orsSavedHint, setOrsSavedHint] = useState<string | null>(null)
+  const [ocmDraft, setOcmDraft] = useState(() => loadStoredOcmApiKey() ?? '')
+  const [ocmSavedHint, setOcmSavedHint] = useState<string | null>(null)
 
   function handleSave(e: FormEvent) {
     e.preventDefault()
@@ -119,8 +129,9 @@ export function SettingsPanel({
           </fieldset>
 
           <p className="section-lead">
-            API key de Google (Distance Matrix). Tiene prioridad sobre{' '}
-            <code>config.js</code>. Nunca se sube al repositorio.
+            API key de Google (Maps JS, Directions, Places, Elevation). Tiene
+            prioridad sobre <code>config.js</code>. Nunca se sube al
+            repositorio.
           </p>
           <form className="settings-form" onSubmit={handleSave}>
             <label className="field">
@@ -182,6 +193,99 @@ export function SettingsPanel({
             </div>
           </form>
           {abrpSavedHint ? <p className="form-hint">{abrpSavedHint}</p> : null}
+
+          <p className="section-lead">
+            OpenRouteService (cuenta gratis). Sin esta clave se usa OSRM
+            público. Nunca se sube al repositorio.
+          </p>
+          <form
+            className="settings-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              saveStoredOrsApiKey(orsDraft)
+              setOrsSavedHint(
+                orsDraft.trim()
+                  ? 'Clave guardada en este navegador.'
+                  : 'Clave eliminada. Se usará config.js si existe.',
+              )
+              onApiKeyChange()
+            }}
+          >
+            <label className="field">
+              <span>OpenRouteService API key</span>
+              <input
+                type="password"
+                value={orsDraft}
+                onChange={(e) => setOrsDraft(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <div className="btn-row">
+              <button type="submit" className="btn-primary">
+                Guardar clave
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  clearStoredOrsApiKey()
+                  setOrsDraft('')
+                  setOrsSavedHint('Clave eliminada. Se usará config.js si existe.')
+                  onApiKeyChange()
+                }}
+              >
+                Borrar clave
+              </button>
+            </div>
+          </form>
+          {orsSavedHint ? <p className="form-hint">{orsSavedHint}</p> : null}
+
+          <p className="section-lead">
+            OpenChargeMap (cuenta gratis) para cargadores en la ruta.
+          </p>
+          <form
+            className="settings-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              saveStoredOcmApiKey(ocmDraft)
+              setOcmSavedHint(
+                ocmDraft.trim()
+                  ? 'Clave guardada en este navegador.'
+                  : 'Clave eliminada. Se usará config.js si existe.',
+              )
+              onApiKeyChange()
+            }}
+          >
+            <label className="field">
+              <span>OpenChargeMap API key</span>
+              <input
+                type="password"
+                value={ocmDraft}
+                onChange={(e) => setOcmDraft(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <div className="btn-row">
+              <button type="submit" className="btn-primary">
+                Guardar clave
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  clearStoredOcmApiKey()
+                  setOcmDraft('')
+                  setOcmSavedHint('Clave eliminada. Se usará config.js si existe.')
+                  onApiKeyChange()
+                }}
+              >
+                Borrar clave
+              </button>
+            </div>
+          </form>
+          {ocmSavedHint ? <p className="form-hint">{ocmSavedHint}</p> : null}
 
           {abrpDraft.trim() ? (
             <fieldset className="settings-fieldset">

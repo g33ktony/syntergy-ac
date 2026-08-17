@@ -20,15 +20,15 @@ Ningún comparador existente (ABRP, Google Maps, comparadores de agencia) hace l
 
 ## Operating Context
 
-- Flujo típico: elegir ruta (precargada MX, agregada manualmente, o vía Google/ABRP), elegir hasta 3 vehículos por modelo→versión, ajustar estilo de manejo (eco/normal/agresivo) y precios de energía ($/kWh, $/L), y comparar resultados lado a lado en modo "solo ida" o "redondo".
-- Fuentes de ruta: presets curados de rutas mexicanas comunes, rutas custom guardadas en `localStorage`, Google Distance Matrix (opcional, requiere API key propia del usuario) y ABRP (opcional, requiere API key de partner pagada — ver `src/lib/providers/abrp.ts`).
+- Flujo típico: elegir ruta (precargada MX, mapa/autocompletado, o km manual de respaldo), elegir hasta 3 vehículos por modelo→versión, ajustar estilo de manejo (eco/normal/agresivo) y precios de energía ($/kWh, $/L), y comparar resultados lado a lado en modo "solo ida" o "redondo".
+- Fuentes de ruta: presets curados de rutas mexicanas comunes, rutas custom guardadas en `localStorage`, Google Directions/Places/Elevation (opcional, API key propia), ABRP (opcional, partner), y fallback gratuito Photon + OSRM/OpenRouteService + OpenTopoData. Casetas vía tabla MX + override; cargadores vía OpenChargeMap.
 - Sin backend ni autenticación: todo corre en el cliente; preferencias (unidades, API keys, rutas custom) viven en `localStorage` del navegador.
 
 ## Capabilities and Constraints
 
 - Catálogo de vehículos hardcodeado en el código (`src/data/vehicles*.ts`), no editable por el usuario final; specs aproximadas de fuentes públicas, documentadas como tal en comentarios.
 - Cálculo puro y testeado (`src/lib/calc*.ts`, Vitest) para BEV, ICE/HEV y PHEV; PHEV usa un modelo simple v1 (eléctrico primero hasta agotar rango, luego combustible; sin recarga asumida en redondo salvo que el usuario lo indique).
-- Sin mapa visual ni ruta turno-a-turno; la distancia/duración es un número, no una polilínea.
+- Mapa visual (Google Maps JS o Leaflet/OSM) con pines arrastrables; la distancia sale del ruteo, no de un campo km (el km manual queda como último recurso).
 - Sin cuentas de usuario ni persistencia server-side.
 - Precios de energía y combustible son constantes/inputs editables por el usuario, no APIs de precio en vivo (salvo el hint opcional de ABRP, que nunca sobreescribe el precio manual automáticamente).
 - Undecided: si/cuándo se integrará un catálogo de vehículos editable o dinámico; si habrá cuentas de usuario en el futuro.
@@ -49,5 +49,5 @@ Ningún comparador existente (ABRP, Google Maps, comparadores de agencia) hace l
 1. La cifra oficial de consumo/autonomía no es la verdad de carretera en México — todo cálculo aplica un factor de realismo explícito y visible, nunca la cifra del fabricante sin ajustar.
 2. Comparar motorizaciones distintas en la misma tabla con métricas unificadas ($/km, factibilidad, tiempo) es el diferenciador central; no degradar esto a "modo eléctrico con extras".
 3. Cero fricción de cuenta: todo funciona sin login; las integraciones opcionales (Google, ABRP) requieren que el usuario traiga su propia API key, nunca una key compartida del producto.
-4. Cuando una fuente de datos opcional falla o no está configurada, el producto sigue funcionando con lo disponible (presets, cálculo manual) — nunca bloquea al usuario.
+4. Cuando una fuente de datos opcional falla o no está configurada, el producto sigue funcionando con lo disponible (presets, ruteo público, cálculo manual) — nunca bloquea al usuario.
 5. Español siempre, ajuste de unidades aparte — nunca acoplar idioma y sistema de unidades.

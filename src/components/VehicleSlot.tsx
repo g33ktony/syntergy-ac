@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
 import { RESERVE_PERCENT } from '../lib/constants'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
+import { tollCostForTripMode } from '../lib/tolls'
 import type {
   AnyVehicle,
   AnyVersion,
@@ -52,6 +54,7 @@ function calcResultForVehicle(
   driveStyle: DriveStyle,
   pricePerKWh: number,
   pricePerLiter: number,
+  phevRechargeAtDestination: boolean,
 ): AnyTripResult | null {
   switch (vehicle.type) {
     case 'BEV': {
@@ -66,6 +69,13 @@ function calcResultForVehicle(
         reservePercent: RESERVE_PERCENT,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
+        elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+        elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+        returnElevationGainM: route.inbound?.elevationGainM,
+        returnElevationLossM: route.inbound?.elevationLossM,
+        returnDistanceKm: route.inbound?.distanceKm,
+        returnDriveHoursOneWay: route.inbound?.driveHours,
+        tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
       })
     }
     case 'ICE':
@@ -80,6 +90,13 @@ function calcResultForVehicle(
         pricePerLiter,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
+        elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+        elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+        returnElevationGainM: route.inbound?.elevationGainM,
+        returnElevationLossM: route.inbound?.elevationLossM,
+        returnDistanceKm: route.inbound?.distanceKm,
+        returnDriveHoursOneWay: route.inbound?.driveHours,
+        tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
       })
     }
     case 'PHEV': {
@@ -94,6 +111,14 @@ function calcResultForVehicle(
         pricePerLiter,
         mode,
         driveHoursOneWay: route.driveHoursOneWay,
+        elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+        elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+        returnElevationGainM: route.inbound?.elevationGainM,
+        returnElevationLossM: route.inbound?.elevationLossM,
+        returnDistanceKm: route.inbound?.distanceKm,
+        returnDriveHoursOneWay: route.inbound?.driveHours,
+        tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
+        rechargeAtDestination: phevRechargeAtDestination,
       })
     }
   }
@@ -117,9 +142,13 @@ function renderResultCard(
   unitSystem: UnitSystem,
   route: Route,
 ) {
-  const speedProps = {
+  const routeProps = {
     avgSpeedLimitKmh: route.avgSpeedLimitKmh,
     avgTravelSpeedKmh: route.avgTravelSpeedKmh,
+    elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
+    elevationLossM: route.outbound?.elevationLossM ?? route.elevationLossM,
+    returnElevationGainM: route.inbound?.elevationGainM,
+    returnElevationLossM: route.inbound?.elevationLossM,
   }
   switch (result.vehicleType) {
     case 'BEV':
@@ -128,7 +157,7 @@ function renderResultCard(
           result={result}
           mode={mode}
           unitSystem={unitSystem}
-          {...speedProps}
+          {...routeProps}
         />
       )
     case 'ICE':
@@ -138,7 +167,7 @@ function renderResultCard(
           result={result}
           mode={mode}
           unitSystem={unitSystem}
-          {...speedProps}
+          {...routeProps}
         />
       )
     case 'PHEV':
@@ -147,7 +176,7 @@ function renderResultCard(
           result={result}
           mode={mode}
           unitSystem={unitSystem}
-          {...speedProps}
+          {...routeProps}
         />
       )
   }
@@ -165,6 +194,8 @@ export function VehicleSlot({
   pricePerLiter,
   unitSystem,
 }: VehicleSlotProps) {
+  const [phevRecharge, setPhevRecharge] = useState(false)
+
   const vehicle: AnyVehicle | null =
     vehicles.find((v) => v.id === selection.vehicleId) ?? null
   const version: AnyVersion | null =
@@ -180,8 +211,12 @@ export function VehicleSlot({
           driveStyle,
           pricePerKWh,
           pricePerLiter,
+          phevRecharge,
         )
       : null
+
+  const showPhevRechargeToggle =
+    vehicle?.type === 'PHEV' && mode === 'roundTrip'
 
   return (
     <section className="vehicle-slot" aria-label={`Vehículo ${slotIndex + 1}`}>
@@ -239,6 +274,34 @@ export function VehicleSlot({
           ))}
         </select>
       </label>
+
+      {showPhevRechargeToggle ? (
+        <fieldset className="mode-toggle">
+          <legend>Recarga en destino</legend>
+          <div
+            className="segmented"
+            role="group"
+            aria-label="Recarga en destino (PHEV, redondo)"
+          >
+            <button
+              type="button"
+              className={!phevRecharge ? 'seg active' : 'seg'}
+              aria-pressed={!phevRecharge}
+              onClick={() => setPhevRecharge(false)}
+            >
+              Sin recarga
+            </button>
+            <button
+              type="button"
+              className={phevRecharge ? 'seg active' : 'seg'}
+              aria-pressed={phevRecharge}
+              onClick={() => setPhevRecharge(true)}
+            >
+              Con recarga
+            </button>
+          </div>
+        </fieldset>
+      ) : null}
 
       {!route ? (
         <p className="slot-hint">Selecciona una ruta para ver resultados.</p>

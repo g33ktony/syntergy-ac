@@ -3,7 +3,9 @@ import {
   DRIVE_STYLE_MULTIPLIERS,
   FUEL_MX_FACTOR,
 } from './constants'
+import { attachTripCosts } from './trip-costs'
 import { calcTankFeasibility } from './calc-tank'
+import { elevationFuelDeltaLiters } from './elevation'
 import type { FuelTripInput, FuelTripResult, FuelTripResultBase } from '../types'
 
 function driveHoursForDistance(
@@ -16,24 +18,36 @@ function driveHoursForDistance(
   return distanceKm / DEFAULT_HIGHWAY_KMH
 }
 
-function calcOneWay(input: FuelTripInput): FuelTripResultBase {
-  const { distanceKm, version, driveStyle, pricePerLiter, driveHoursOneWay } =
-    input
+function calcOneWay(
+  input: FuelTripInput,
+  distanceKm = input.distanceKm,
+  driveHoursOneWay = input.driveHoursOneWay,
+  elevationGainM = input.elevationGainM,
+  tollCostMxn = 0,
+): FuelTripResultBase {
+  const { version, driveStyle, pricePerLiter } = input
 
   const styleMult = DRIVE_STYLE_MULTIPLIERS[driveStyle]
   const consumptionEffective =
     version.consumptionLPer100 * FUEL_MX_FACTOR * styleMult
-  const litersUsed = (distanceKm * consumptionEffective) / 100
+  const baseLiters = (distanceKm * consumptionEffective) / 100
+  const litersUsed = Math.max(
+    0,
+    baseLiters + elevationFuelDeltaLiters(elevationGainM),
+  )
   const tank = calcTankFeasibility(litersUsed, version.tankLiters)
 
-  return {
-    distanceKm,
-    driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
-    litersUsed,
-    costMxn: litersUsed * pricePerLiter,
-    ...tank,
-    fuel: version.fuel,
-  }
+  return attachTripCosts(
+    {
+      distanceKm,
+      driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
+      litersUsed,
+      costMxn: litersUsed * pricePerLiter,
+      ...tank,
+      fuel: version.fuel,
+    },
+    tollCostMxn,
+  )
 }
 
 /**
@@ -42,21 +56,39 @@ function calcOneWay(input: FuelTripInput): FuelTripResultBase {
  * (energy → liters, SoC → tank %, charge stops → fuel stops).
  */
 export function calcFuelTrip(input: FuelTripInput): FuelTripResult {
-  const oneWay = calcOneWay(input)
+  const oneWay = calcOneWay(
+    input,
+    input.distanceKm,
+    input.driveHoursOneWay,
+    input.elevationGainM,
+    input.mode === 'oneWay' ? input.tollCostMxn : 0,
+  )
 
   if (input.mode === 'oneWay') {
     return oneWay
   }
 
-  // Recompute feasibility for the full round-trip distance. Doubling the
-  // one-way stop flags is wrong when one leg fits the tank but both do not
-  // (e.g. GDL↔CDMX presets).
-  const roundTrip = calcOneWay({
-    ...input,
-    distanceKm: input.distanceKm * 2,
-    driveHoursOneWay:
-      input.driveHoursOneWay != null ? input.driveHoursOneWay * 2 : undefined,
-  })
+  const returnDistance = input.returnDistanceKm ?? input.distanceKm
+  const returnGain = input.returnElevationGainM ?? input.elevationLossM
+  const returnLeg = calcOneWay(
+    input,
+    returnDistance,
+    input.returnDriveHoursOneWay ?? input.driveHoursOneWay,
+    returnGain,
+    0,
+  )
+  const litersUsed = oneWay.litersUsed + returnLeg.litersUsed
+  const roundTrip = attachTripCosts(
+    {
+      distanceKm: oneWay.distanceKm + returnLeg.distanceKm,
+      driveHours: oneWay.driveHours + returnLeg.driveHours,
+      litersUsed,
+      costMxn: oneWay.costMxn + returnLeg.costMxn,
+      ...calcTankFeasibility(litersUsed, input.version.tankLiters),
+      fuel: input.version.fuel,
+    },
+    input.tollCostMxn,
+  )
 
   return {
     ...roundTrip,

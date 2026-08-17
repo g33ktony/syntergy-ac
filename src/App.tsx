@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { RouteManager } from './components/RouteManager'
+import { RouteComposer } from './components/RouteComposer'
 import { SettingsPanel } from './components/SettingsPanel'
 import { TripControls } from './components/TripControls'
 import {
@@ -31,9 +31,7 @@ function App() {
     loadCustomRoutes(),
   )
   const [googleRoutes, setGoogleRoutes] = useState<Route[]>([])
-  const [selectedRouteId, setSelectedRouteId] = useState(
-    () => presetRoutes[0]?.id ?? '',
-  )
+  const [selectedRouteId, setSelectedRouteId] = useState('')
   const [mode, setMode] = useState<TripMode>('oneWay')
   const [driveStyle, setDriveStyle] = useState<DriveStyle>('normal')
   const [pricePerKWh, setPricePerKWh] = useState(DEFAULT_PRICE_PER_KWH)
@@ -62,9 +60,14 @@ function App() {
     setSlots((prev) => prev.map((s, i) => (i === index ? next : s)))
   }
 
-  function handleGoogleRoute(route: Route) {
+  function handleLookedUpRoute(route: Route) {
     setGoogleRoutes((prev) => [route, ...prev].slice(0, 5))
     setSelectedRouteId(route.id)
+  }
+
+  function handleSelectedRouteChange(route: Route) {
+    setGoogleRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
+    setCustomRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
   }
 
   function handleCustomRouteCreated(route: Route) {
@@ -76,7 +79,7 @@ function App() {
     if (selectedRouteId.startsWith('custom-')) {
       const stillThere = routes.some((r) => r.id === selectedRouteId)
       if (!stillThere) {
-        setSelectedRouteId(presetRoutes[0]?.id ?? '')
+        setSelectedRouteId('')
       }
     }
   }
@@ -98,11 +101,20 @@ function App() {
         />
       </header>
 
+      <RouteComposer
+        customRoutes={customRoutes}
+        onCustomRoutesChange={handleCustomRoutesChange}
+        onRouteCreated={handleCustomRouteCreated}
+        onSelectPreset={(route) => setSelectedRouteId(route.id)}
+        onLookedUpRoute={handleLookedUpRoute}
+        mode={mode}
+        routeSourcePreference={routeSourcePreference}
+        apiKeyEpoch={apiKeyEpoch}
+        selectedRoute={selectedRoute}
+        onSelectedRouteChange={handleSelectedRouteChange}
+      />
+
       <TripControls
-        routes={allRoutes}
-        selectedRouteId={selectedRouteId}
-        onSelectRouteId={setSelectedRouteId}
-        onGoogleRoute={handleGoogleRoute}
         mode={mode}
         onModeChange={setMode}
         driveStyle={driveStyle}
@@ -111,16 +123,9 @@ function App() {
         onPriceChange={setPricePerKWh}
         pricePerLiter={pricePerLiter}
         onPricePerLiterChange={setPricePerLiter}
-        apiKeyEpoch={apiKeyEpoch}
-        routeSourcePreference={routeSourcePreference}
         unitSystem={unitSystem}
         onApplySuggestedPrice={setPricePerKWh}
-      />
-
-      <RouteManager
-        customRoutes={customRoutes}
-        onCustomRoutesChange={handleCustomRoutesChange}
-        onRouteCreated={handleCustomRouteCreated}
+        selectedRoute={selectedRoute}
       />
 
       <section className="slots" aria-label="Comparación de vehículos">
@@ -143,9 +148,9 @@ function App() {
 
       <p className="footnote">
         El consumo oficial (NEDC/CLTC) no es carretera real. Usamos un factor
-        MX y el estilo de manejo para aproximar. Las paradas de carga y de
-        reabastecimiento son estimaciones por distancia y tanque, no red
-        VEMO/Evergo ni estaciones.
+        MX y el estilo de manejo para aproximar. Las paradas de carga son
+        estimaciones por distancia; los puntos OpenChargeMap son de referencia.
+        Casetas: tabla MX aproximada, corrígela si tienes el dato real.
       </p>
     </main>
   )

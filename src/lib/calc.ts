@@ -4,6 +4,8 @@ import {
   KM_PER_CHARGE_STOP,
   MX_FACTOR,
 } from './constants'
+import { attachTripCosts } from './trip-costs'
+import { elevationEnergyDeltaKWh } from './elevation'
 import type {
   AnyVehicle,
   ComparisonRow,
@@ -28,33 +30,37 @@ function driveHoursForDistance(
   return distanceKm / DEFAULT_HIGHWAY_KMH
 }
 
-function calcOneWay(input: TripInput): TripResultBase {
-  const {
-    distanceKm,
-    version,
-    driveStyle,
-    pricePerKWh,
-    reservePercent,
-    driveHoursOneWay,
-  } = input
-
-  const styleMult = DRIVE_STYLE_MULTIPLIERS[driveStyle]
+function baseEnergyKWh(input: TripInput, distanceKm = input.distanceKm): number {
+  const styleMult = DRIVE_STYLE_MULTIPLIERS[input.driveStyle]
   const consumptionEffective =
-    version.consumptionKWhPer100 * MX_FACTOR * styleMult
-  const energyKWh = (distanceKm * consumptionEffective) / 100
-  const arrivalSocPercent = 100 - (energyKWh / version.batteryKWh) * 100
-  const chargeStopsEstimate = Math.ceil(distanceKm / KM_PER_CHARGE_STOP)
+    input.version.consumptionKWhPer100 * MX_FACTOR * styleMult
+  return (distanceKm * consumptionEffective) / 100
+}
 
-  return {
-    distanceKm,
-    driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
-    energyKWh,
-    costMxn: energyKWh * pricePerKWh,
-    arrivalSocPercent,
-    reachesWithReserve: arrivalSocPercent >= reservePercent,
-    chargeStopsEstimate,
-    connector: version.connector,
-  }
+function fromEnergyKWh(
+  energyKWh: number,
+  distanceKm: number,
+  input: TripInput,
+  hoursOverride?: number,
+  tollCostMxn = 0,
+): TripResultBase {
+  const arrivalSocPercent = 100 - (energyKWh / input.version.batteryKWh) * 100
+  return attachTripCosts(
+    {
+      distanceKm,
+      driveHours: driveHoursForDistance(
+        distanceKm,
+        hoursOverride ?? input.driveHoursOneWay,
+      ),
+      energyKWh,
+      costMxn: energyKWh * input.pricePerKWh,
+      arrivalSocPercent,
+      reachesWithReserve: arrivalSocPercent >= input.reservePercent,
+      chargeStopsEstimate: Math.ceil(distanceKm / KM_PER_CHARGE_STOP),
+      connector: input.version.connector,
+    },
+    tollCostMxn,
+  )
 }
 
 /**
@@ -62,28 +68,53 @@ function calcOneWay(input: TripInput): TripResultBase {
  * No React / I/O — safe to unit-test.
  */
 export function calcTrip(input: TripInput): TripResult {
-  const oneWay = calcOneWay(input)
+  const oneWayElevationDelta = elevationEnergyDeltaKWh(
+    input.elevationGainM,
+    input.elevationLossM,
+  )
+  const oneWayEnergy = Math.max(
+    0,
+    baseEnergyKWh(input) + oneWayElevationDelta,
+  )
+  const oneWay = fromEnergyKWh(
+    oneWayEnergy,
+    input.distanceKm,
+    input,
+    input.driveHoursOneWay,
+    input.mode === 'oneWay' ? input.tollCostMxn : 0,
+  )
 
   if (input.mode === 'oneWay') {
     return oneWay
   }
 
-  const energyKWh = oneWay.energyKWh * 2
-  const arrivalSocPercent =
-    100 - (2 * oneWay.energyKWh * 100) / input.version.batteryKWh
+  const returnDistance = input.returnDistanceKm ?? input.distanceKm
+  const returnGain = input.returnElevationGainM ?? input.elevationLossM
+  const returnLoss = input.returnElevationLossM ?? input.elevationGainM
+  const returnLegElevationDelta = elevationEnergyDeltaKWh(returnGain, returnLoss)
+  const returnEnergy = Math.max(
+    0,
+    baseEnergyKWh(input, returnDistance) + returnLegElevationDelta,
+  )
+  const roundTripEnergy = oneWayEnergy + returnEnergy
+  const totalDistance = input.distanceKm + returnDistance
+  const roundTrip = fromEnergyKWh(
+    roundTripEnergy,
+    totalDistance,
+    input,
+    undefined,
+    input.tollCostMxn,
+  )
+  const returnHours = driveHoursForDistance(
+    returnDistance,
+    input.returnDriveHoursOneWay,
+  )
 
   return {
-    distanceKm: oneWay.distanceKm * 2,
-    driveHours: oneWay.driveHours * 2,
-    energyKWh,
-    costMxn: energyKWh * input.pricePerKWh,
-    arrivalSocPercent,
-    reachesWithReserve: arrivalSocPercent >= input.reservePercent,
+    ...roundTrip,
+    driveHours: oneWay.driveHours + returnHours,
     chargeStopsEstimate: oneWay.chargeStopsEstimate,
-    chargeStopsRoundTripEstimate: Math.ceil(
-      (2 * input.distanceKm) / KM_PER_CHARGE_STOP,
-    ),
-    connector: input.version.connector,
+    chargeStopsRoundTripEstimate: Math.ceil(totalDistance / KM_PER_CHARGE_STOP),
     oneWay,
   }
 }
@@ -147,8 +178,9 @@ export function toComparisonRow(
     vehicleId,
     versionId,
     type,
-    totalCostMxn: result.costMxn,
-    costPerKm: result.distanceKm > 0 ? result.costMxn / result.distanceKm : 0,
+    totalCostMxn: result.totalCostMxn,
+    tollCostMxn: result.tollCostMxn,
+    costPerKm: result.distanceKm > 0 ? result.totalCostMxn / result.distanceKm : 0,
     feasibleWithoutStop: feasible,
     feasibilityReason: feasibilityReason(type, feasible),
     driveHours: result.driveHours,

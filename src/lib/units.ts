@@ -116,3 +116,51 @@ export function formatAvgSpeedRow(
     value: `${formatTripUnits(speedKmh, 'speed', unitSystem, 0)} · ${speedKindSuffix(kind, unitSystem)}`,
   }
 }
+
+/**
+ * Elevation row for a result card. Returns null when the route has no
+ * elevation data at all (most routes — ABRP-only, opt-in) so callers can
+ * skip the row entirely rather than showing "+0 m / -0 m".
+ */
+/**
+ * Round-trip elevation totals: the return leg climbs what the outbound leg
+ * descended and vice versa, so total ascent = total descent = gain + loss
+ * (route-enrichment spec §4.4). Returns undefined fields untouched when no
+ * elevation data exists, so formatElevationRow still returns null for it.
+ */
+export function roundTripElevation(
+  gainM: number | undefined,
+  lossM: number | undefined,
+): { gainM: number | undefined; lossM: number | undefined } {
+  if (gainM == null && lossM == null) return { gainM: undefined, lossM: undefined }
+  const total = (gainM ?? 0) + (lossM ?? 0)
+  return { gainM: total, lossM: total }
+}
+
+/** Prefer measured inbound elevation; otherwise assume the return mirrors outbound. */
+export function displayRoundTripElevation(
+  outboundGainM?: number,
+  outboundLossM?: number,
+  returnGainM?: number,
+  returnLossM?: number,
+): { gainM: number | undefined; lossM: number | undefined } {
+  if (returnGainM != null || returnLossM != null) {
+    return {
+      gainM: (outboundGainM ?? 0) + (returnGainM ?? 0),
+      lossM: (outboundLossM ?? 0) + (returnLossM ?? 0),
+    }
+  }
+  return roundTripElevation(outboundGainM, outboundLossM)
+}
+
+export function formatElevationRow(
+  gainM: number | undefined,
+  lossM: number | undefined,
+  unitSystem: UnitSystem,
+): { label: string; value: string } | null {
+  if (gainM == null && lossM == null) return null
+  return {
+    label: 'Elevación',
+    value: `+${formatTripUnits(gainM ?? 0, 'elevation', unitSystem, 0)} / -${formatTripUnits(lossM ?? 0, 'elevation', unitSystem, 0)}`,
+  }
+}

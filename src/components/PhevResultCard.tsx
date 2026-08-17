@@ -1,6 +1,11 @@
 import type { PhevTripResult, PhevTripResultBase, TripMode, UnitSystem } from '../types'
 import { formatHours, formatLocaleNumber, formatMxn, fuelTypeLabel } from '../lib/format'
-import { formatAvgSpeedRow, formatTripUnits } from '../lib/units'
+import {
+  displayRoundTripElevation,
+  formatAvgSpeedRow,
+  formatElevationRow,
+  formatTripUnits,
+} from '../lib/units'
 
 type PhevResultCardProps = {
   result: PhevTripResult
@@ -8,6 +13,10 @@ type PhevResultCardProps = {
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
+  returnElevationGainM?: number
+  returnElevationLossM?: number
 }
 
 function roundTripLabel(rechargeAtDestination: boolean): string {
@@ -22,12 +31,16 @@ function Metrics({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
 }: {
   result: PhevTripResultBase
   label?: string
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  elevationGainM?: number
+  elevationLossM?: number
 }) {
   const speed = formatAvgSpeedRow(
     {
@@ -38,6 +51,7 @@ function Metrics({
     },
     unitSystem,
   )
+  const elevation = formatElevationRow(elevationGainM, elevationLossM, unitSystem)
   const fuelWord = fuelTypeLabel(result.fuel).toLowerCase()
 
   return (
@@ -56,6 +70,12 @@ function Metrics({
           <dt>{speed.label}</dt>
           <dd>{speed.value}</dd>
         </div>
+        {elevation ? (
+          <div>
+            <dt>{elevation.label}</dt>
+            <dd>{elevation.value}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Tramo eléctrico</dt>
           <dd>
@@ -92,9 +112,21 @@ function Metrics({
           </dd>
         </div>
         <div className="metric-total">
-          <dt>Costo</dt>
+          <dt>{result.tollCostMxn > 0 ? 'Costo energía/combustible' : 'Costo'}</dt>
           <dd>{formatMxn(result.costMxn)}</dd>
         </div>
+        {result.tollCostMxn > 0 ? (
+          <>
+            <div>
+              <dt>Casetas</dt>
+              <dd>{formatMxn(result.tollCostMxn)}</dd>
+            </div>
+            <div className="metric-total">
+              <dt>Costo total</dt>
+              <dd>{formatMxn(result.totalCostMxn)}</dd>
+            </div>
+          </>
+        ) : null}
       </dl>
     </div>
   )
@@ -106,8 +138,18 @@ export function PhevResultCard({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  elevationGainM,
+  elevationLossM,
+  returnElevationGainM,
+  returnElevationLossM,
 }: PhevResultCardProps) {
   if (mode === 'roundTrip' && result.oneWay) {
+    const roundTrip = displayRoundTripElevation(
+      elevationGainM,
+      elevationLossM,
+      returnElevationGainM,
+      returnElevationLossM,
+    )
     return (
       <article className="result-card">
         <Metrics
@@ -116,6 +158,8 @@ export function PhevResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={elevationGainM}
+          elevationLossM={elevationLossM}
         />
         <Metrics
           result={result}
@@ -123,6 +167,8 @@ export function PhevResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          elevationGainM={roundTrip.gainM}
+          elevationLossM={roundTrip.lossM}
         />
       </article>
     )
@@ -135,6 +181,8 @@ export function PhevResultCard({
         unitSystem={unitSystem}
         avgSpeedLimitKmh={avgSpeedLimitKmh}
         avgTravelSpeedKmh={avgTravelSpeedKmh}
+        elevationGainM={elevationGainM}
+        elevationLossM={elevationLossM}
       />
     </article>
   )

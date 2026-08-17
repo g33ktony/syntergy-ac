@@ -4,6 +4,8 @@ const CUSTOM_ROUTES_KEY = 'syntergy-ac:custom-routes'
 const API_KEY_KEY = 'syntergy-ac:google-api-key'
 const UNIT_SYSTEM_KEY = 'syntergy-ac:unit-system'
 const ABRP_API_KEY_KEY = 'syntergy-ac:abrp-api-key'
+const ORS_API_KEY_KEY = 'syntergy-ac:ors-api-key'
+const OCM_API_KEY_KEY = 'syntergy-ac:ocm-api-key'
 const ROUTE_SOURCE_PREFERENCE_KEY = 'syntergy-ac:route-source-preference'
 
 function canUseStorage(): boolean {
@@ -33,8 +35,9 @@ export function addCustomRoute(input: {
   to: string
   distanceKm: number
   driveHoursOneWay?: number
-}): Route {
+} & Partial<Omit<Route, 'id' | 'from' | 'to' | 'distanceKm' | 'source'>>): Route {
   const route: Route = {
+    ...input,
     id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     from: input.from.trim(),
     to: input.to.trim(),
@@ -112,6 +115,50 @@ export function clearStoredAbrpApiKey(): void {
   localStorage.removeItem(ABRP_API_KEY_KEY)
 }
 
+function loadOptionalKey(storageKey: string): string | null {
+  if (!canUseStorage()) return null
+  const value = localStorage.getItem(storageKey)
+  if (value == null) return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function saveOptionalKey(storageKey: string, key: string): void {
+  if (!canUseStorage()) return
+  const trimmed = key.trim()
+  if (trimmed.length === 0) {
+    localStorage.removeItem(storageKey)
+    return
+  }
+  localStorage.setItem(storageKey, trimmed)
+}
+
+export function loadStoredOrsApiKey(): string | null {
+  return loadOptionalKey(ORS_API_KEY_KEY)
+}
+
+export function saveStoredOrsApiKey(key: string): void {
+  saveOptionalKey(ORS_API_KEY_KEY, key)
+}
+
+export function clearStoredOrsApiKey(): void {
+  if (!canUseStorage()) return
+  localStorage.removeItem(ORS_API_KEY_KEY)
+}
+
+export function loadStoredOcmApiKey(): string | null {
+  return loadOptionalKey(OCM_API_KEY_KEY)
+}
+
+export function saveStoredOcmApiKey(key: string): void {
+  saveOptionalKey(OCM_API_KEY_KEY, key)
+}
+
+export function clearStoredOcmApiKey(): void {
+  if (!canUseStorage()) return
+  localStorage.removeItem(OCM_API_KEY_KEY)
+}
+
 export function loadRouteSourcePreference(): RouteSourcePreference {
   if (!canUseStorage()) return 'google'
   const value = localStorage.getItem(ROUTE_SOURCE_PREFERENCE_KEY)
@@ -135,6 +182,8 @@ function isRoute(value: unknown): value is Route {
       r.source === 'custom' ||
       r.source === 'google' ||
       r.source === 'abrp' ||
-      r.source === 'merged')
+      r.source === 'merged' ||
+      r.source === 'osm' ||
+      r.source === 'ors')
   )
 }

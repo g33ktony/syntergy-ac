@@ -25,16 +25,67 @@ export type Vehicle = {
 // every enrichment field left undefined.
 // ---------------------------------------------------------------------------
 
-export type RouteSource = 'preset' | 'custom' | 'google' | 'abrp' | 'merged'
+export type RouteSource =
+  | 'preset'
+  | 'custom'
+  | 'google'
+  | 'abrp'
+  | 'merged'
+  | 'osm'
+  | 'ors'
 
 /** Per-field provenance, so the UI can show "de dónde salió este número". */
 export type FieldSource =
   | 'preset'
   | 'google'
   | 'abrp'
+  | 'osm'
+  | 'ors'
   | 'derived'
   | 'merged'
   | 'manual'
+  | 'mx-table'
+  | 'none'
+
+export type LatLng = { lat: number; lng: number }
+
+export type PlaceRef = string | LatLng
+
+export type RouteQuery = {
+  from: PlaceRef
+  to: PlaceRef
+  roundTrip?: boolean
+}
+
+export type RouteLeg = {
+  distanceKm: number
+  driveHours: number
+  elevationGainM?: number
+  elevationLossM?: number
+  avgTravelSpeedKmh?: number
+  /** Decimal points for the map and elevation sampling. */
+  path: LatLng[]
+}
+
+export type TollSegment = { id: string; name: string; costMxn: number }
+
+export type TollEstimate = {
+  likelyTolls: boolean
+  costMxn: number
+  source: 'google' | 'osm' | 'mx-table' | 'manual' | 'none'
+  segments: TollSegment[]
+}
+
+export type ChargingPoi = {
+  id: string
+  name: string
+  lat: number
+  lng: number
+  powerKW?: number
+  connectors?: string[]
+  network?: string
+  alongKm?: number
+}
 
 export type RouteEnrichmentFields = {
   /** distanceKm / driveHours when a provider gives duration. */
@@ -58,6 +109,14 @@ export type Route = {
   distanceKm: number
   source: RouteSource
   driveHoursOneWay?: number
+  origin?: LatLng
+  dest?: LatLng
+  outbound?: RouteLeg
+  /** Present when the lookup requested a real return leg. */
+  inbound?: RouteLeg
+  likelyTolls?: boolean
+  tolls?: TollEstimate
+  chargingPois?: ChargingPoi[]
 } & RouteEnrichmentFields & {
     fieldSources?: FieldSources
   }
@@ -82,13 +141,26 @@ export type TripInput = {
   reservePercent: number
   mode: TripMode
   driveHoursOneWay?: number
+  /** Route-level elevation (route-enrichment spec §7.5); ABRP-sourced, opt-in. */
+  elevationGainM?: number
+  elevationLossM?: number
+  /** Real return-leg elevation when two routings were fetched. */
+  returnElevationGainM?: number
+  returnElevationLossM?: number
+  returnDistanceKm?: number
+  returnDriveHoursOneWay?: number
+  /** Casetas for this trip (ida, or ida+vuelta if already summed). */
+  tollCostMxn?: number
 }
 
 export type TripResultBase = {
   distanceKm: number
   driveHours: number
   energyKWh: number
+  /** Energy/fuel spend only (no casetas). */
   costMxn: number
+  tollCostMxn: number
+  totalCostMxn: number
   arrivalSocPercent: number
   reachesWithReserve: boolean
   chargeStopsEstimate: number
@@ -178,6 +250,13 @@ export type FuelTripInput = {
   pricePerLiter: number
   mode: TripMode
   driveHoursOneWay?: number
+  elevationGainM?: number
+  elevationLossM?: number
+  returnElevationGainM?: number
+  returnElevationLossM?: number
+  returnDistanceKm?: number
+  returnDriveHoursOneWay?: number
+  tollCostMxn?: number
 }
 
 export type FuelTripResultBase = {
@@ -185,6 +264,8 @@ export type FuelTripResultBase = {
   driveHours: number
   litersUsed: number
   costMxn: number
+  tollCostMxn: number
+  totalCostMxn: number
   arrivalFuelPercent: number
   reachesWithoutStop: boolean
   fuelStopsEstimate: number
@@ -205,6 +286,13 @@ export type PhevTripInput = {
   driveHoursOneWay?: number
   /** Conservative default: no recharge at destination on round trips. */
   rechargeAtDestination?: boolean
+  elevationGainM?: number
+  elevationLossM?: number
+  returnElevationGainM?: number
+  returnElevationLossM?: number
+  returnDistanceKm?: number
+  returnDriveHoursOneWay?: number
+  tollCostMxn?: number
 }
 
 export type PhevTripResultBase = {
@@ -215,6 +303,8 @@ export type PhevTripResultBase = {
   energyKWh: number
   litersUsed: number
   costMxn: number
+  tollCostMxn: number
+  totalCostMxn: number
   arrivalFuelPercent: number
   reachesWithoutStop: boolean
   fuelStopsEstimate: number
@@ -234,6 +324,7 @@ export type ComparisonRow = {
   versionId: string
   type: Powertrain
   totalCostMxn: number
+  tollCostMxn: number
   costPerKm: number
   feasibleWithoutStop: boolean
   feasibilityReason: string
