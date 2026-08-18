@@ -2,14 +2,12 @@ import { useMemo, useState } from 'react'
 import { RouteComposer } from './components/RouteComposer'
 import { SettingsPanel } from './components/SettingsPanel'
 import { TripControls } from './components/TripControls'
-import {
-  VehicleSlot,
-  type SlotSelection,
-} from './components/VehicleSlot'
+import { VehicleSlot } from './components/VehicleSlot'
 import { presetRoutes } from './data/routes'
 import { getAllMultiFuelVehicles } from './data/vehicles-multifuel'
 import { DEFAULT_HIGHWAY_KMH, DEFAULT_PRICE_PER_KWH, DEFAULT_PRICE_PER_LITER } from './lib/constants'
-import { seedAverageSpeedKmh } from './lib/speed-factor'
+import { createSlot, type SlotSelection } from './lib/slots'
+import { routeGeometryChanged, seedAverageSpeedKmh } from './lib/speed-factor'
 import {
   loadCustomRoutes,
   loadRouteSourcePreference,
@@ -24,8 +22,6 @@ import type {
 } from './types'
 import './App.css'
 
-const EMPTY_SLOT: SlotSelection = { vehicleId: '', versionId: '' }
-
 function App() {
   const vehicles = getAllMultiFuelVehicles()
   const [customRoutes, setCustomRoutes] = useState<Route[]>(() =>
@@ -38,7 +34,7 @@ function App() {
   const [pricePerKWh, setPricePerKWh] = useState(DEFAULT_PRICE_PER_KWH)
   const [pricePerLiter, setPricePerLiter] = useState(DEFAULT_PRICE_PER_LITER)
   const [averageSpeedKmh, setAverageSpeedKmh] = useState(DEFAULT_HIGHWAY_KMH)
-  const [slots, setSlots] = useState<SlotSelection[]>([EMPTY_SLOT])
+  const [slots, setSlots] = useState<SlotSelection[]>(() => [createSlot()])
   const [apiKeyEpoch, setApiKeyEpoch] = useState(0)
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(() =>
     loadUnitSystem(),
@@ -71,7 +67,9 @@ function App() {
   function handleSelectedRouteChange(route: Route) {
     setGoogleRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
     setCustomRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
-    setAverageSpeedKmh(seedAverageSpeedKmh(route))
+    if (routeGeometryChanged(selectedRoute, route)) {
+      setAverageSpeedKmh(seedAverageSpeedKmh(route))
+    }
   }
 
   function handleCustomRouteCreated(route: Route) {
@@ -140,14 +138,17 @@ function App() {
       <section className="slots" aria-label="Comparación de vehículos">
         {slots.map((selection, index) => (
           <VehicleSlot
-            key={index}
+            key={selection.id}
             slotIndex={index}
             vehicles={vehicles}
             selection={selection}
             onChange={(next) => updateSlot(index, next)}
             onRemove={
               slots.length > 1
-                ? () => setSlots((prev) => prev.filter((_, i) => i !== index))
+                ? () =>
+                    setSlots((prev) =>
+                      prev.filter((slot) => slot.id !== selection.id),
+                    )
                 : undefined
             }
             route={selectedRoute}
@@ -165,7 +166,7 @@ function App() {
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => setSlots((s) => [...s, EMPTY_SLOT])}
+            onClick={() => setSlots((s) => [...s, createSlot()])}
           >
             Agregar auto para comparar
           </button>

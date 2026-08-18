@@ -13,6 +13,7 @@ type FuelResultCardProps = {
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  cruiseSpeedKmh?: number
   elevationGainM?: number
   elevationLossM?: number
   returnElevationGainM?: number
@@ -25,6 +26,7 @@ function Metrics({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  cruiseSpeedKmh,
   elevationGainM,
   elevationLossM,
 }: {
@@ -33,6 +35,7 @@ function Metrics({
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  cruiseSpeedKmh?: number
   elevationGainM?: number
   elevationLossM?: number
 }) {
@@ -42,6 +45,7 @@ function Metrics({
       driveHours: result.driveHours,
       avgSpeedLimitKmh,
       avgTravelSpeedKmh,
+      cruiseSpeedKmh,
     },
     unitSystem,
   )
@@ -125,6 +129,7 @@ export function FuelResultCard({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  cruiseSpeedKmh,
   elevationGainM,
   elevationLossM,
   returnElevationGainM,
@@ -145,6 +150,7 @@ export function FuelResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          cruiseSpeedKmh={cruiseSpeedKmh}
           elevationGainM={elevationGainM}
           elevationLossM={elevationLossM}
         />
@@ -154,6 +160,7 @@ export function FuelResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          cruiseSpeedKmh={cruiseSpeedKmh}
           elevationGainM={roundTrip.gainM}
           elevationLossM={roundTrip.lossM}
         />
@@ -168,6 +175,7 @@ export function FuelResultCard({
         unitSystem={unitSystem}
         avgSpeedLimitKmh={avgSpeedLimitKmh}
         avgTravelSpeedKmh={avgTravelSpeedKmh}
+        cruiseSpeedKmh={cruiseSpeedKmh}
         elevationGainM={elevationGainM}
         elevationLossM={elevationLossM}
       />

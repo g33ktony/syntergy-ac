@@ -75,12 +75,16 @@ export type ResolveSpeedInput = {
   driveHours: number
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  cruiseSpeedKmh?: number
 }
 
 export function resolveAvgSpeedKmh(input: ResolveSpeedInput): {
   speedKmh: number
   kind: SpeedDisplayKind
 } {
+  if (input.cruiseSpeedKmh != null && input.cruiseSpeedKmh > 0) {
+    return { speedKmh: input.cruiseSpeedKmh, kind: 'estimated' }
+  }
   if (input.avgSpeedLimitKmh != null && input.avgSpeedLimitKmh > 0) {
     return { speedKmh: input.avgSpeedLimitKmh, kind: 'limits' }
   }

@@ -30,3 +30,27 @@ export function seedAverageSpeedKmh(
   }
   return DEFAULT_HIGHWAY_KMH
 }
+
+type RouteGeometry = {
+  id: string
+  distanceKm: number
+  driveHoursOneWay?: number
+  origin?: { lat: number; lng: number }
+  dest?: { lat: number; lng: number }
+}
+
+export function routeGeometryChanged(
+  prev: RouteGeometry | null,
+  next: RouteGeometry,
+): boolean {
+  if (!prev) return true
+  return (
+    prev.id !== next.id ||
+    prev.distanceKm !== next.distanceKm ||
+    prev.driveHoursOneWay !== next.driveHoursOneWay ||
+    prev.origin?.lat !== next.origin?.lat ||
+    prev.origin?.lng !== next.origin?.lng ||
+    prev.dest?.lat !== next.dest?.lat ||
+    prev.dest?.lng !== next.dest?.lng
+  )
+}

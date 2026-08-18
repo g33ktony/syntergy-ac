@@ -30,6 +30,17 @@ describe('units conversions', () => {
 })
 
 describe('resolveAvgSpeedKmh', () => {
+  it('prefers cruiseSpeedKmh from the trip control over provider limits', () => {
+    const result = resolveAvgSpeedKmh({
+      distanceKm: 100,
+      driveHours: 2,
+      avgSpeedLimitKmh: 95,
+      avgTravelSpeedKmh: 80,
+      cruiseSpeedKmh: 77,
+    })
+    expect(result).toEqual({ speedKmh: 77, kind: 'estimated' })
+  })
+
   it('prefers speed-limit average when present', () => {
     const result = resolveAvgSpeedKmh({
       distanceKm: 100,
@@ -58,6 +69,20 @@ describe('resolveAvgSpeedKmh', () => {
       speedKmh: DEFAULT_HIGHWAY_KMH,
       kind: 'fallback',
     })
+  })
+
+  it('formats the cruise speed even when provider limits exist', () => {
+    const row = formatAvgSpeedRow(
+      {
+        distanceKm: 100,
+        driveHours: 2,
+        avgSpeedLimitKmh: 95,
+        cruiseSpeedKmh: 77,
+      },
+      'metric',
+    )
+    expect(row.value).toContain('77')
+    expect(row.value).toContain('estimada')
   })
 
   it('builds a Spanish avg-speed row for imperial', () => {
