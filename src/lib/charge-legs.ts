@@ -2,7 +2,13 @@ import { DRIVE_STYLE_MULTIPLIERS, MX_FACTOR } from './constants'
 import { speedConsumptionFactor } from './speed-factor'
 import { estimateTolls } from './tolls'
 import { placeLabel } from './place'
-import type { lookupTrip } from './providers/lookup-trip'
+import {
+  getAbrpApiKey,
+  getGoogleApiKey,
+  getOpenChargeMapApiKey,
+  getOrsApiKey,
+} from './config'
+import { lookupTrip } from './providers/lookup-trip'
 import type { ChargingPoi, DriveStyle, LatLng, PlaceRef, Route, RouteLeg, RouteSourcePreference } from '../types'
 
 export function bevKWhPerKm(input: {
@@ -93,8 +99,25 @@ export async function lookupTripViaStops(options: LookupTripViaStopsOptions): Pr
       inbound,
       likelyTolls: tolls.likelyTolls,
       tolls,
+      chargingPois: options.stops,
     }
   } catch {
     return null
   }
+}
+
+export function lookupTripViaStopsFromConfig(
+  options: Omit<
+    LookupTripViaStopsOptions,
+    'lookup' | 'googleKey' | 'abrpKey' | 'orsKey' | 'ocmKey'
+  >,
+): Promise<Route | null> {
+  return lookupTripViaStops({
+    ...options,
+    lookup: lookupTrip,
+    googleKey: getGoogleApiKey(),
+    abrpKey: getAbrpApiKey(),
+    orsKey: getOrsApiKey(),
+    ocmKey: getOpenChargeMapApiKey(),
+  })
 }

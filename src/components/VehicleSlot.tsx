@@ -1,6 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
-import { DEFAULT_HIGHWAY_KMH, RESERVE_PERCENT } from '../lib/constants'
+import {
+  CHARGE_TARGET_PERCENT,
+  DEFAULT_HIGHWAY_KMH,
+  MAX_CHARGE_STOPS,
+  RESERVE_PERCENT,
+} from '../lib/constants'
+import { bevKWhPerKm, lookupTripViaStopsFromConfig } from '../lib/charge-legs'
+import { planChargeStops } from '../lib/charge-plan'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
 import { tollCostForTripMode } from '../lib/tolls'
 import type { SlotSelection } from '../lib/slots'
@@ -18,6 +25,8 @@ import { PhevResultCard } from './PhevResultCard'
 import { PowertrainBadge } from './PowertrainBadge'
 import { ResultCard } from './ResultCard'
 
+type ChargeMode = 'none' | 'withStops'
+
 type VehicleSlotProps = {
   slotIndex: number
   vehicles: AnyVehicle[]
@@ -31,6 +40,8 @@ type VehicleSlotProps = {
   pricePerLiter: number
   unitSystem: UnitSystem
   averageSpeedKmh?: number
+  onFocus?: () => void
+  onSlotRouteChange?: (route: Route | null) => void
 }
 
 /** `AnyVersion`'s variants aren't tagged; distinguish by their unique fields. */
@@ -199,15 +210,21 @@ export function VehicleSlot({
   pricePerLiter,
   unitSystem,
   averageSpeedKmh = DEFAULT_HIGHWAY_KMH,
+  onFocus,
+  onSlotRouteChange,
 }: VehicleSlotProps) {
   const [phevRecharge, setPhevRecharge] = useState(false)
+  const [chargeMode, setChargeMode] = useState<ChargeMode>('none')
+  const [viaStopsRoute, setViaStopsRoute] = useState<Route | null>(null)
+  const [chargePlanError, setChargePlanError] = useState<string | null>(null)
+  const [chargePlanBusy, setChargePlanBusy] = useState(false)
 
   const vehicle: AnyVehicle | null =
     vehicles.find((v) => v.id === selection.vehicleId) ?? null
   const version: AnyVersion | null =
     vehicle?.versions.find((v) => v.id === selection.versionId) ?? null
 
-  const result =
+  const baseResult =
     route && vehicle && version
       ? calcResultForVehicle(
           vehicle,
@@ -222,11 +239,117 @@ export function VehicleSlot({
         )
       : null
 
+  const showChargeStopsToggle =
+    baseResult != null &&
+    baseResult.vehicleType === 'BEV' &&
+    !baseResult.reachesWithReserve
+
+  useEffect(() => {
+    if (!showChargeStopsToggle) {
+      setChargeMode('none')
+    }
+  }, [showChargeStopsToggle])
+
+  useEffect(() => {
+    if (chargeMode !== 'withStops' || !route || vehicle?.type !== 'BEV' || !version) {
+      setViaStopsRoute(null)
+      onSlotRouteChange?.(null)
+      setChargePlanError(null)
+      return
+    }
+    const bevVersion = version as Extract<AnyVersion, { batteryKWh: number; connector: string }>
+    const origin = route.origin ?? route.from
+    const dest = route.dest ?? route.to
+    const path = route.outbound?.path
+    if (!path || path.length === 0) {
+      setChargePlanError('La ruta no tiene geometría; no se pueden planear cargas.')
+      return
+    }
+
+    let cancelled = false
+    setChargePlanBusy(true)
+    setChargePlanError(null)
+
+    const kWhPerKm = bevKWhPerKm({
+      consumptionKWhPer100: bevVersion.consumptionKWhPer100,
+      driveStyle,
+      averageSpeedKmh,
+    })
+
+    const plan = planChargeStops({
+      path,
+      pathLengthKm: route.distanceKm,
+      pois: route.chargingPois ?? [],
+      batteryKWh: bevVersion.batteryKWh,
+      kWhPerKm,
+      reservePercent: RESERVE_PERCENT,
+      startSocPercent: 100,
+      chargeToPercent: CHARGE_TARGET_PERCENT,
+      maxStops: MAX_CHARGE_STOPS,
+      connector: bevVersion.connector,
+    })
+
+    if (!plan.feasible && plan.stops.length === 0) {
+      setChargePlanBusy(false)
+      setChargePlanError('No se encontró un cargador compatible en la ruta.')
+      setViaStopsRoute(null)
+      onSlotRouteChange?.(null)
+      return
+    }
+
+    void (async () => {
+      const stitched = await lookupTripViaStopsFromConfig({
+        origin,
+        dest,
+        stops: plan.stops.map((s) => s.poi),
+        roundTrip: mode === 'roundTrip',
+        preference: 'both',
+      })
+      if (cancelled) return
+      setChargePlanBusy(false)
+      if (!stitched) {
+        setChargePlanError('No se pudo trazar la ruta con paradas de carga. Se usa la ruta base.')
+        setViaStopsRoute(null)
+        onSlotRouteChange?.(null)
+        return
+      }
+      setViaStopsRoute(stitched)
+      onSlotRouteChange?.(stitched)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chargeMode, route, vehicle, version, driveStyle, averageSpeedKmh, mode])
+
+  const activeRoute = chargeMode === 'withStops' && viaStopsRoute ? viaStopsRoute : route
+
+  const result =
+    activeRoute && vehicle && version
+      ? calcResultForVehicle(
+          vehicle,
+          selection.versionId,
+          activeRoute,
+          mode,
+          driveStyle,
+          pricePerKWh,
+          pricePerLiter,
+          phevRecharge,
+          averageSpeedKmh,
+        )
+      : baseResult
+
   const showPhevRechargeToggle =
     vehicle?.type === 'PHEV' && mode === 'roundTrip'
 
   return (
-    <section className="vehicle-slot" aria-label={`Vehículo ${slotIndex + 1}`}>
+    <section
+      className="vehicle-slot"
+      aria-label={`Vehículo ${slotIndex + 1}`}
+      onFocus={onFocus}
+      onClick={onFocus}
+    >
       <header className="slot-header">
         <span className="slot-index">Vehículo {slotIndex + 1}</span>
         {onRemove ? (
@@ -317,12 +440,45 @@ export function VehicleSlot({
         </fieldset>
       ) : null}
 
-      {!route ? (
+      {vehicle?.type === 'BEV' ? (
+        showChargeStopsToggle ? (
+          <fieldset className="mode-toggle">
+            <legend>Cargas en ruta</legend>
+            <div className="segmented" role="group" aria-label="Cargas en ruta">
+              <button
+                type="button"
+                className={chargeMode === 'none' ? 'seg active' : 'seg'}
+                aria-pressed={chargeMode === 'none'}
+                onClick={() => setChargeMode('none')}
+              >
+                Sin cargas
+              </button>
+              <button
+                type="button"
+                className={chargeMode === 'withStops' ? 'seg active' : 'seg'}
+                aria-pressed={chargeMode === 'withStops'}
+                onClick={() => setChargeMode('withStops')}
+              >
+                {chargePlanBusy ? 'Calculando…' : 'Con cargas'}
+              </button>
+            </div>
+            {chargePlanError ? (
+              <p className="form-error" role="alert">
+                {chargePlanError}
+              </p>
+            ) : null}
+          </fieldset>
+        ) : (
+          <p className="form-hint">No hace falta cargar en ruta.</p>
+        )
+      ) : null}
+
+      {!activeRoute ? (
         <p className="slot-hint">Selecciona una ruta para ver resultados.</p>
       ) : !vehicle || !version ? (
         <p className="slot-hint">Elige modelo y versión.</p>
-      ) : result && route ? (
-        renderResultCard(result, mode, unitSystem, route, averageSpeedKmh)
+      ) : result && activeRoute ? (
+        renderResultCard(result, mode, unitSystem, activeRoute, averageSpeedKmh)
       ) : null}
     </section>
   )

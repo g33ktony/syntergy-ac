@@ -11,6 +11,7 @@ import { applyTollOverride } from '../lib/tolls'
 import { presetRoutes, routeLabel } from '../data/routes'
 import type { LatLng, Route, RouteSourcePreference, TripMode } from '../types'
 import { MapView } from './MapView'
+import type { RouteOverlay } from './map-overlays'
 import { PlaceField } from './PlaceField'
 
 type RouteComposerProps = {
@@ -24,6 +25,7 @@ type RouteComposerProps = {
   apiKeyEpoch: number
   selectedRoute: Route | null
   onSelectedRouteChange: (route: Route) => void
+  overlays?: RouteOverlay[]
 }
 
 export function RouteComposer({
@@ -37,6 +39,7 @@ export function RouteComposer({
   apiKeyEpoch,
   selectedRoute,
   onSelectedRouteChange,
+  overlays,
 }: RouteComposerProps) {
   void apiKeyEpoch
   const useGoogle = hasGoogleApiKey()
@@ -232,6 +235,7 @@ export function RouteComposer({
         outboundPath={outboundPath}
         inboundPath={inboundPath}
         onPinsChange={handlePinsChange}
+        overlays={overlays}
       />
 
       {error ? (

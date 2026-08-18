@@ -20,6 +20,7 @@ import type {
   TripMode,
   UnitSystem,
 } from './types'
+import type { RouteOverlay } from './components/map-overlays'
 import './App.css'
 
 function App() {
@@ -35,6 +36,8 @@ function App() {
   const [pricePerLiter, setPricePerLiter] = useState(DEFAULT_PRICE_PER_LITER)
   const [averageSpeedKmh, setAverageSpeedKmh] = useState(DEFAULT_HIGHWAY_KMH)
   const [slots, setSlots] = useState<SlotSelection[]>(() => [createSlot()])
+  const [slotRoutes, setSlotRoutes] = useState<(Route | null)[]>([null])
+  const [focusedSlotIndex, setFocusedSlotIndex] = useState<number | null>(null)
   const [apiKeyEpoch, setApiKeyEpoch] = useState(0)
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(() =>
     loadUnitSystem(),
@@ -50,8 +53,29 @@ function App() {
   const selectedRoute =
     allRoutes.find((r) => r.id === selectedRouteId) ?? null
 
+  const overlays = useMemo<RouteOverlay[]>(() => {
+    return slots
+      .map((selection, index): RouteOverlay | null => {
+        const slotRoute = slotRoutes[index] ?? selectedRoute
+        const outboundPath = slotRoute?.outbound?.path
+        if (!outboundPath || outboundPath.length === 0) return null
+        return {
+          id: selection.id,
+          outboundPath,
+          inboundPath: slotRoute?.inbound?.path,
+          focused: focusedSlotIndex === index,
+          stops: slotRoutes[index]?.chargingPois,
+        }
+      })
+      .filter((overlay): overlay is RouteOverlay => overlay != null)
+  }, [slots, slotRoutes, selectedRoute, focusedSlotIndex])
+
   function updateSlot(index: number, next: SlotSelection) {
     setSlots((prev) => prev.map((s, i) => (i === index ? next : s)))
+  }
+
+  function updateSlotRoute(index: number, route: Route | null) {
+    setSlotRoutes((prev) => prev.map((r, i) => (i === index ? route : r)))
   }
 
   function applyLookedUpRoute(route: Route) {
@@ -117,6 +141,7 @@ function App() {
         apiKeyEpoch={apiKeyEpoch}
         selectedRoute={selectedRoute}
         onSelectedRouteChange={handleSelectedRouteChange}
+        overlays={overlays}
       />
 
       <TripControls
@@ -145,10 +170,15 @@ function App() {
             onChange={(next) => updateSlot(index, next)}
             onRemove={
               slots.length > 1
-                ? () =>
+                ? () => {
                     setSlots((prev) =>
                       prev.filter((slot) => slot.id !== selection.id),
                     )
+                    setSlotRoutes((prev) => prev.filter((_, i) => i !== index))
+                    setFocusedSlotIndex((prev) =>
+                      prev === index ? null : prev,
+                    )
+                  }
                 : undefined
             }
             route={selectedRoute}
@@ -158,6 +188,8 @@ function App() {
             pricePerLiter={pricePerLiter}
             unitSystem={unitSystem}
             averageSpeedKmh={averageSpeedKmh}
+            onFocus={() => setFocusedSlotIndex(index)}
+            onSlotRouteChange={(route) => updateSlotRoute(index, route)}
           />
         ))}
       </section>
@@ -166,7 +198,10 @@ function App() {
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => setSlots((s) => [...s, createSlot()])}
+            onClick={() => {
+              setSlots((s) => [...s, createSlot()])
+              setSlotRoutes((r) => [...r, null])
+            }}
           >
             Agregar auto para comparar
           </button>

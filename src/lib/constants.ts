@@ -14,6 +14,10 @@ export const RESERVE_PERCENT = 15
 /** Rough charge-stop heuristic: 1 stop per this many km. */
 export const KM_PER_CHARGE_STOP = 150
 
+/** Charge-planner: max detour stops per trip, target SoC after each stop. */
+export const MAX_CHARGE_STOPS = 6
+export const CHARGE_TARGET_PERCENT = 80
+
 /** Fallback average highway speed when route has no duration. */
 export const DEFAULT_HIGHWAY_KMH = 90
 
