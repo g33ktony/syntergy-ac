@@ -1,11 +1,8 @@
-import {
-  DEFAULT_HIGHWAY_KMH,
-  DRIVE_STYLE_MULTIPLIERS,
-  KM_PER_CHARGE_STOP,
-  MX_FACTOR,
-} from './constants'
-import { attachTripCosts } from './trip-costs'
+import { DRIVE_STYLE_MULTIPLIERS, MX_FACTOR } from './constants'
+import { attachCompareMetrics, attachTripCosts } from './trip-costs'
 import { elevationEnergyDeltaKWh } from './elevation'
+import { tripCo2Kg } from './co2'
+import { clampSpeedKmh, speedConsumptionFactor } from './speed-factor'
 import type {
   AnyVehicle,
   ComparisonRow,
@@ -22,18 +19,18 @@ import { calcPhevTrip } from './calc-phev'
 
 function driveHoursForDistance(
   distanceKm: number,
-  driveHoursOneWay?: number,
+  averageSpeedKmh: number,
 ): number {
-  if (driveHoursOneWay != null && driveHoursOneWay > 0) {
-    return driveHoursOneWay
-  }
-  return distanceKm / DEFAULT_HIGHWAY_KMH
+  return distanceKm / clampSpeedKmh(averageSpeedKmh)
 }
 
 function baseEnergyKWh(input: TripInput, distanceKm = input.distanceKm): number {
   const styleMult = DRIVE_STYLE_MULTIPLIERS[input.driveStyle]
   const consumptionEffective =
-    input.version.consumptionKWhPer100 * MX_FACTOR * styleMult
+    input.version.consumptionKWhPer100 *
+    MX_FACTOR *
+    styleMult *
+    speedConsumptionFactor(input.averageSpeedKmh)
   return (distanceKm * consumptionEffective) / 100
 }
 
@@ -45,22 +42,22 @@ function fromEnergyKWh(
   tollCostMxn = 0,
 ): TripResultBase {
   const arrivalSocPercent = 100 - (energyKWh / input.version.batteryKWh) * 100
-  return attachTripCosts(
+  const priced = attachTripCosts(
     {
       distanceKm,
-      driveHours: driveHoursForDistance(
-        distanceKm,
-        hoursOverride ?? input.driveHoursOneWay,
-      ),
+      driveHours:
+        hoursOverride ??
+        driveHoursForDistance(distanceKm, input.averageSpeedKmh),
       energyKWh,
       costMxn: energyKWh * input.pricePerKWh,
       arrivalSocPercent,
       reachesWithReserve: arrivalSocPercent >= input.reservePercent,
-      chargeStopsEstimate: Math.ceil(distanceKm / KM_PER_CHARGE_STOP),
+      chargeStopsEstimate: 0,
       connector: input.version.connector,
     },
     tollCostMxn,
   )
+  return attachCompareMetrics(priced, tripCo2Kg({ energyKWh }))
 }
 
 /**
@@ -72,15 +69,12 @@ export function calcTrip(input: TripInput): TripResult {
     input.elevationGainM,
     input.elevationLossM,
   )
-  const oneWayEnergy = Math.max(
-    0,
-    baseEnergyKWh(input) + oneWayElevationDelta,
-  )
+  const oneWayEnergy = Math.max(0, baseEnergyKWh(input) + oneWayElevationDelta)
   const oneWay = fromEnergyKWh(
     oneWayEnergy,
     input.distanceKm,
     input,
-    input.driveHoursOneWay,
+    driveHoursForDistance(input.distanceKm, input.averageSpeedKmh),
     input.mode === 'oneWay' ? input.tollCostMxn : 0,
   )
 
@@ -107,24 +101,17 @@ export function calcTrip(input: TripInput): TripResult {
   )
   const returnHours = driveHoursForDistance(
     returnDistance,
-    input.returnDriveHoursOneWay,
+    input.averageSpeedKmh,
   )
 
   return {
     ...roundTrip,
     driveHours: oneWay.driveHours + returnHours,
-    chargeStopsEstimate: oneWay.chargeStopsEstimate,
-    chargeStopsRoundTripEstimate: Math.ceil(totalDistance / KM_PER_CHARGE_STOP),
+    chargeStopsEstimate: 0,
+    chargeStopsRoundTripEstimate: 0,
     oneWay,
   }
 }
-
-// ---------------------------------------------------------------------------
-// Phase 2 — multi-fuel dispatch (plan Task 3/4: "wire calcTrip switch on
-// type"). Kept as a separate exported function rather than overloading
-// `calcTrip` above, so Phase 1's BEV-only call sites (VehicleSlot) keep
-// their existing signature untouched.
-// ---------------------------------------------------------------------------
 
 export type AnyTripInput =
   | ({ vehicleType: 'BEV' } & TripInput)
@@ -165,7 +152,7 @@ function isFeasibleWithoutStop(result: AnyTripResult): boolean {
     : result.reachesWithoutStop
 }
 
-/** Reduces any powertrain's trip result to the shared comparison row shape. */
+/** Reduces any powertrain's result to the shared comparison row shape. */
 export function toComparisonRow(
   vehicleId: string,
   versionId: string,
@@ -180,7 +167,8 @@ export function toComparisonRow(
     type,
     totalCostMxn: result.totalCostMxn,
     tollCostMxn: result.tollCostMxn,
-    costPerKm: result.distanceKm > 0 ? result.totalCostMxn / result.distanceKm : 0,
+    costPerKm:
+      result.distanceKm > 0 ? result.totalCostMxn / result.distanceKm : 0,
     feasibleWithoutStop: feasible,
     feasibilityReason: feasibilityReason(type, feasible),
     driveHours: result.driveHours,

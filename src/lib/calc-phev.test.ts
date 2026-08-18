@@ -30,6 +30,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     expect(result.usedElectricOnly).toBe(true)
@@ -51,6 +52,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     const impliedKWhPer100 = (version.batteryKWh / version.electricRangeKmOfficial) * 100
@@ -71,6 +73,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay' as const,
+      averageSpeedKmh: 90,
     }
 
     const eco = calcPhevTrip({ ...base, driveStyle: 'eco' })
@@ -94,6 +97,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay' as const,
+      averageSpeedKmh: 90,
     }
 
     const eco = calcPhevTrip({ ...base, driveStyle: 'eco' })
@@ -117,6 +121,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     expect(result.usedElectricOnly).toBe(false)
@@ -139,6 +144,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
     const round = calcPhevTrip({
       distanceKm: 150,
@@ -147,6 +153,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
 
     expect(round.oneWay).toBeDefined()
@@ -170,6 +177,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     expect(result.usedElectricOnly).toBe(false)
@@ -191,6 +199,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
       driveHoursOneWay: gdlCdmx.driveHoursOneWay,
     })
     const roundTrip = calcPhevTrip({
@@ -200,6 +209,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
       driveHoursOneWay: gdlCdmx.driveHoursOneWay,
     })
 
@@ -221,6 +231,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
     const climbing = calcPhevTrip({
       distanceKm: 150,
@@ -229,6 +240,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
       elevationGainM: 900,
     })
 
@@ -247,6 +259,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
     const downhillOneWay = calcPhevTrip({
       distanceKm: 150,
@@ -255,6 +268,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
       elevationGainM: 0,
       elevationLossM: 500,
     })
@@ -273,6 +287,7 @@ describe('calcPhevTrip', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
       elevationGainM: 5000,
     })
 

@@ -1,5 +1,7 @@
 import { routeLabel } from '../data/routes'
-import { formatTripUnits } from '../lib/units'
+import { MAX_SPEED_KMH, MIN_SPEED_KMH } from '../lib/constants'
+import { clampSpeedKmh } from '../lib/speed-factor'
+import { formatTripUnits, kmhToMph, miToKm } from '../lib/units'
 import type {
   DriveStyle,
   Route,
@@ -25,6 +27,8 @@ type TripControlsProps = {
   unitSystem: UnitSystem
   onApplySuggestedPrice: (price: number) => void
   selectedRoute: Route | null
+  averageSpeedKmh: number
+  onAverageSpeedChange: (speedKmh: number) => void
 }
 
 function sourceSuffix(source: Route['source']): string {
@@ -48,6 +52,8 @@ export function TripControls({
   unitSystem,
   onApplySuggestedPrice,
   selectedRoute,
+  averageSpeedKmh,
+  onAverageSpeedChange,
 }: TripControlsProps) {
   const styleIndex = DRIVE_STYLE_OPTIONS.findIndex((o) => o.value === driveStyle)
 
@@ -108,6 +114,41 @@ export function TripControls({
             <span>Eco</span>
             <span>Normal</span>
             <span>Agresivo</span>
+          </span>
+        </label>
+
+        <label className="field">
+          <span>
+            Velocidad promedio (
+            {unitSystem === 'imperial' ? 'mph' : 'km/h'})
+          </span>
+          <input
+            type="number"
+            min={
+              unitSystem === 'imperial'
+                ? Math.round(kmhToMph(MIN_SPEED_KMH))
+                : MIN_SPEED_KMH
+            }
+            max={
+              unitSystem === 'imperial'
+                ? Math.round(kmhToMph(MAX_SPEED_KMH))
+                : MAX_SPEED_KMH
+            }
+            step={1}
+            value={
+              unitSystem === 'imperial'
+                ? Math.round(kmhToMph(averageSpeedKmh))
+                : Math.round(averageSpeedKmh)
+            }
+            onChange={(e) => {
+              const n = Number(e.target.value)
+              if (!Number.isFinite(n)) return
+              const kmh = unitSystem === 'imperial' ? miToKm(n) : n
+              onAverageSpeedChange(clampSpeedKmh(kmh))
+            }}
+          />
+          <span className="form-hint">
+            Afecta tiempo y consumo de todos los tickets.
           </span>
         </label>
 

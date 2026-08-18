@@ -13,6 +13,7 @@ type FuelResultCardProps = {
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  cruiseSpeedKmh?: number
   elevationGainM?: number
   elevationLossM?: number
   returnElevationGainM?: number
@@ -25,6 +26,7 @@ function Metrics({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  cruiseSpeedKmh,
   elevationGainM,
   elevationLossM,
 }: {
@@ -33,6 +35,7 @@ function Metrics({
   unitSystem: UnitSystem
   avgSpeedLimitKmh?: number
   avgTravelSpeedKmh?: number
+  cruiseSpeedKmh?: number
   elevationGainM?: number
   elevationLossM?: number
 }) {
@@ -42,6 +45,7 @@ function Metrics({
       driveHours: result.driveHours,
       avgSpeedLimitKmh,
       avgTravelSpeedKmh,
+      cruiseSpeedKmh,
     },
     unitSystem,
   )
@@ -106,6 +110,14 @@ function Metrics({
             </div>
           </>
         ) : null}
+        <div>
+          <dt>Costo por km</dt>
+          <dd>{formatMxn(result.costPerKm)}</dd>
+        </div>
+        <div>
+          <dt>CO₂ (est.)</dt>
+          <dd>{formatLocaleNumber(result.co2Kg, 1)} kg</dd>
+        </div>
       </dl>
     </div>
   )
@@ -117,6 +129,7 @@ export function FuelResultCard({
   unitSystem,
   avgSpeedLimitKmh,
   avgTravelSpeedKmh,
+  cruiseSpeedKmh,
   elevationGainM,
   elevationLossM,
   returnElevationGainM,
@@ -137,6 +150,7 @@ export function FuelResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          cruiseSpeedKmh={cruiseSpeedKmh}
           elevationGainM={elevationGainM}
           elevationLossM={elevationLossM}
         />
@@ -146,6 +160,7 @@ export function FuelResultCard({
           unitSystem={unitSystem}
           avgSpeedLimitKmh={avgSpeedLimitKmh}
           avgTravelSpeedKmh={avgTravelSpeedKmh}
+          cruiseSpeedKmh={cruiseSpeedKmh}
           elevationGainM={roundTrip.gainM}
           elevationLossM={roundTrip.lossM}
         />
@@ -160,6 +175,7 @@ export function FuelResultCard({
         unitSystem={unitSystem}
         avgSpeedLimitKmh={avgSpeedLimitKmh}
         avgTravelSpeedKmh={avgTravelSpeedKmh}
+        cruiseSpeedKmh={cruiseSpeedKmh}
         elevationGainM={elevationGainM}
         elevationLossM={elevationLossM}
       />
