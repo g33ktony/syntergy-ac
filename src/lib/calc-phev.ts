@@ -1,4 +1,8 @@
-import { DRIVE_STYLE_MULTIPLIERS, FUEL_MX_FACTOR } from './constants'
+import {
+  DRIVE_STYLE_MULTIPLIERS,
+  FUEL_MX_FACTOR,
+  MX_FACTOR,
+} from './constants'
 import { attachCompareMetrics, attachTripCosts } from './trip-costs'
 import { calcTankFeasibility } from './calc-tank'
 import { elevationEnergyDeltaKWh, elevationFuelDeltaLiters } from './elevation'
@@ -72,7 +76,7 @@ function calcOneWay(input: PhevTripInput): PhevTripResultBase {
     version.electricRangeKmOfficial > 0
       ? (version.batteryKWh / version.electricRangeKmOfficial) * 100
       : 0
-  const evConsumptionEffective = impliedKWhPer100 * FUEL_MX_FACTOR * styleMult
+  const evConsumptionEffective = impliedKWhPer100 * MX_FACTOR * styleMult
   const electricRangeEffective =
     evConsumptionEffective > 0
       ? (version.batteryKWh / evConsumptionEffective) * 100

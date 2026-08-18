@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { calcPhevTrip } from './calc-phev'
-import { FUEL_MX_FACTOR } from './constants'
+import { MX_FACTOR } from './constants'
 import { presetRoutes } from '../data/routes'
 import { phevVehicles } from '../data/vehicles-phev'
 import type { PhevVersion } from '../types'
@@ -56,13 +56,30 @@ describe('calcPhevTrip', () => {
     })
 
     const impliedKWhPer100 = (version.batteryKWh / version.electricRangeKmOfficial) * 100
-    const expectedEnergy = (40 * impliedKWhPer100 * FUEL_MX_FACTOR) / 100
+    const expectedEnergy = (40 * impliedKWhPer100 * MX_FACTOR) / 100
     expect(result.energyKWh).toBeCloseTo(expectedEnergy, 5)
     expect(result.electricKmUsed).toBe(40)
-    // Factor < 1 on consumption lengthens effective range vs official km.
-    expect(version.electricRangeKmOfficial / FUEL_MX_FACTOR).toBeGreaterThan(
-      version.electricRangeKmOfficial,
-    )
+  })
+
+  it('uses some fuel on a trip that fits official EV range but not MX_FACTOR-adjusted range', () => {
+    const version = ravFourPrime()
+    const official = version.electricRangeKmOfficial
+    const effectiveKm = official / MX_FACTOR
+    const distanceKm = (effectiveKm + official) / 2
+    const result = calcPhevTrip({
+      distanceKm,
+      version,
+      driveStyle: 'normal',
+      pricePerKWh: 2,
+      pricePerLiter: 24,
+      mode: 'oneWay',
+      averageSpeedKmh: 90,
+    })
+
+    expect(distanceKm).toBeLessThan(official)
+    expect(result.usedElectricOnly).toBe(false)
+    expect(result.fuelKmUsed).toBeGreaterThan(0)
+    expect(result.electricKmUsed).toBeLessThan(distanceKm)
   })
 
   it('applies drive-style to EV range and energy on electric-only trips', () => {

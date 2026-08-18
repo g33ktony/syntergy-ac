@@ -1,7 +1,11 @@
+import { useEffect, useState } from 'react'
 import { routeLabel } from '../data/routes'
-import { MAX_SPEED_KMH, MIN_SPEED_KMH } from '../lib/constants'
-import { clampSpeedKmh } from '../lib/speed-factor'
-import { formatTripUnits, kmhToMph, miToKm } from '../lib/units'
+import {
+  commitSpeedKmh,
+  formatSpeedDraft,
+  liveSpeedKmhFromDraft,
+} from '../lib/speed-input'
+import { formatTripUnits } from '../lib/units'
 import type {
   DriveStyle,
   Route,
@@ -56,6 +60,29 @@ export function TripControls({
   onAverageSpeedChange,
 }: TripControlsProps) {
   const styleIndex = DRIVE_STYLE_OPTIONS.findIndex((o) => o.value === driveStyle)
+
+  const displayedSpeed = formatSpeedDraft(averageSpeedKmh, unitSystem)
+  const [speedDraft, setSpeedDraft] = useState(displayedSpeed)
+  const [speedFocused, setSpeedFocused] = useState(false)
+
+  useEffect(() => {
+    if (speedFocused) return
+    setSpeedDraft(displayedSpeed)
+  }, [displayedSpeed, speedFocused])
+
+  /** Keep a local draft so partial keystrokes ("9" of "90") never rewrite
+   * parent speed. Live-apply only in-range values; clamp/revert on blur. */
+  function handleSpeedChange(raw: string) {
+    setSpeedDraft(raw)
+    const live = liveSpeedKmhFromDraft(raw, unitSystem)
+    if (live != null) onAverageSpeedChange(live)
+  }
+
+  function commitSpeedDraft() {
+    const next = commitSpeedKmh(speedDraft, unitSystem, averageSpeedKmh)
+    onAverageSpeedChange(next)
+    setSpeedDraft(formatSpeedDraft(next, unitSystem))
+  }
 
   return (
     <section className="trip-controls" aria-labelledby="trip-controls-heading">
@@ -124,27 +151,17 @@ export function TripControls({
           </span>
           <input
             type="number"
-            min={
-              unitSystem === 'imperial'
-                ? Math.round(kmhToMph(MIN_SPEED_KMH))
-                : MIN_SPEED_KMH
-            }
-            max={
-              unitSystem === 'imperial'
-                ? Math.round(kmhToMph(MAX_SPEED_KMH))
-                : MAX_SPEED_KMH
-            }
+            inputMode="numeric"
             step={1}
-            value={
-              unitSystem === 'imperial'
-                ? Math.round(kmhToMph(averageSpeedKmh))
-                : Math.round(averageSpeedKmh)
-            }
-            onChange={(e) => {
-              const n = Number(e.target.value)
-              if (!Number.isFinite(n)) return
-              const kmh = unitSystem === 'imperial' ? miToKm(n) : n
-              onAverageSpeedChange(clampSpeedKmh(kmh))
+            value={speedDraft}
+            onChange={(e) => handleSpeedChange(e.target.value)}
+            onFocus={() => setSpeedFocused(true)}
+            onBlur={() => {
+              commitSpeedDraft()
+              setSpeedFocused(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitSpeedDraft()
             }}
           />
           <span className="form-hint">

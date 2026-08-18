@@ -84,28 +84,30 @@ describe('calcFuelTrip ICE/HEV', () => {
   })
 
   it('recomputes round-trip stops when one-way fits but total distance does not', () => {
-    const gdlCdmx = presetRoutes.find((route) => route.id === 'gdl-cdmx')!
+    // Distance picked so one-way fits under MX_FACTOR-adjusted range but the
+    // doubled round-trip distance exceeds tank capacity.
+    const cdmxMorelia = presetRoutes.find((route) => route.id === 'cdmx-morelia')!
     const version = iceVehicles
       .find((vehicle) => vehicle.id === 'vw-virtus')!
       .versions.find((item) => item.id === 'virtus-comfortline')!
 
     const oneWay = calcFuelTrip({
-      distanceKm: gdlCdmx.distanceKm,
+      distanceKm: cdmxMorelia.distanceKm,
       version,
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'oneWay',
       averageSpeedKmh: 90,
-      driveHoursOneWay: gdlCdmx.driveHoursOneWay,
+      driveHoursOneWay: cdmxMorelia.driveHoursOneWay,
     })
     const roundTrip = calcFuelTrip({
-      distanceKm: gdlCdmx.distanceKm,
+      distanceKm: cdmxMorelia.distanceKm,
       version,
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'roundTrip',
       averageSpeedKmh: 90,
-      driveHoursOneWay: gdlCdmx.driveHoursOneWay,
+      driveHoursOneWay: cdmxMorelia.driveHoursOneWay,
     })
 
     expect(oneWay.reachesWithoutStop).toBe(true)
