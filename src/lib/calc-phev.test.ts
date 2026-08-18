@@ -59,8 +59,8 @@ describe('calcPhevTrip', () => {
     const expectedEnergy = (40 * impliedKWhPer100 * FUEL_MX_FACTOR) / 100
     expect(result.energyKWh).toBeCloseTo(expectedEnergy, 5)
     expect(result.electricKmUsed).toBe(40)
-    // Factor < 1 on consumption lengthens effective range vs official km.
-    expect(version.electricRangeKmOfficial / FUEL_MX_FACTOR).toBeGreaterThan(
+    // Factor > 1 on consumption shortens effective range vs official km.
+    expect(version.electricRangeKmOfficial / FUEL_MX_FACTOR).toBeLessThan(
       version.electricRangeKmOfficial,
     )
   })

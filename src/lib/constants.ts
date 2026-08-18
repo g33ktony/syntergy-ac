@@ -1,7 +1,12 @@
 /** Tunables for BEV trip math (see design §6 / §12). */
 
-/** Highway MX realism vs official NEDC/CLTC consumption. */
-export const MX_FACTOR = 0.8
+/**
+ * Highway MX realism vs official NEDC/CLTC consumption: real-world highway
+ * driving (AC, wind, tire wear, non-ideal conditions) runs above the
+ * official combined-cycle rating, calibrated against ABRP's real-world
+ * estimates (~1.3x official at normal style/90 km/h).
+ */
+export const MX_FACTOR = 1.3
 
 export const DRIVE_STYLE_MULTIPLIERS = {
   eco: 0.9,

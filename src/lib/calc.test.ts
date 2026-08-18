@@ -35,7 +35,7 @@ describe('calcTrip BEV', () => {
 
   it('computes one-way energy, SoC, cost, and reserve for Dolphin Mini Plus', () => {
     const version = dolphinPlus()
-    // 120 km one-way, normal style: effective 10 * 0.8 * 1.0 = 8 kWh/100
+    // 120 km one-way, normal style: effective 10 * MX_FACTOR * 1.0 kWh/100
     const result = calcTrip({
       distanceKm: 120,
       version,
@@ -46,12 +46,13 @@ describe('calcTrip BEV', () => {
       averageSpeedKmh: 90,
     })
 
+    const expectedEnergy = (120 * 10 * MX_FACTOR) / 100
     expect(result.oneWay).toBeUndefined()
     expect(result.distanceKm).toBe(120)
-    expect(result.energyKWh).toBeCloseTo(9.6, 5)
-    expect(result.costMxn).toBeCloseTo(19.2, 5)
+    expect(result.energyKWh).toBeCloseTo(expectedEnergy, 5)
+    expect(result.costMxn).toBeCloseTo(expectedEnergy * 2, 5)
     expect(result.arrivalSocPercent).toBeCloseTo(
-      100 - (9.6 / 38) * 100,
+      100 - (expectedEnergy / 38) * 100,
       5,
     )
     expect(result.reachesWithReserve).toBe(true)
@@ -92,15 +93,16 @@ describe('calcTrip BEV', () => {
       averageSpeedKmh: 90,
     })
 
+    const expectedOneWayEnergy = (120 * 10 * MX_FACTOR) / 100
     expect(result.oneWay).toBeDefined()
     expect(result.oneWay!.distanceKm).toBe(120)
-    expect(result.oneWay!.energyKWh).toBeCloseTo(9.6, 5)
+    expect(result.oneWay!.energyKWh).toBeCloseTo(expectedOneWayEnergy, 5)
     expect(result.distanceKm).toBe(240)
-    expect(result.energyKWh).toBeCloseTo(19.2, 5)
-    expect(result.costMxn).toBeCloseTo(38.4, 5)
+    expect(result.energyKWh).toBeCloseTo(expectedOneWayEnergy * 2, 5)
+    expect(result.costMxn).toBeCloseTo(expectedOneWayEnergy * 2 * 2, 5)
     expect(result.driveHours).toBeCloseTo((120 / 90) * 2, 5)
     expect(result.arrivalSocPercent).toBeCloseTo(
-      100 - (2 * 9.6 * 100) / 38,
+      100 - (2 * expectedOneWayEnergy * 100) / 38,
       5,
     )
     // per-leg stops still based on one-way distance
@@ -198,9 +200,10 @@ describe('calcTrip BEV', () => {
       averageSpeedKmh: 90,
       tollCostMxn: 320,
     })
-    expect(result.costMxn).toBeCloseTo(19.2, 5)
+    const expectedCost = ((120 * 10 * MX_FACTOR) / 100) * 2
+    expect(result.costMxn).toBeCloseTo(expectedCost, 5)
     expect(result.tollCostMxn).toBe(320)
-    expect(result.totalCostMxn).toBeCloseTo(339.2, 5)
+    expect(result.totalCostMxn).toBeCloseTo(expectedCost + 320, 5)
   })
 
   it('uses a real inbound elevation profile when provided', () => {

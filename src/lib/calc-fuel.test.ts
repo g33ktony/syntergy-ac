@@ -84,7 +84,9 @@ describe('calcFuelTrip ICE/HEV', () => {
   })
 
   it('recomputes round-trip stops when one-way fits but total distance does not', () => {
-    const gdlCdmx = presetRoutes.find((route) => route.id === 'gdl-cdmx')!
+    // Distance picked so one-way fits under MX_FACTOR-adjusted range but the
+    // doubled round-trip distance exceeds tank capacity.
+    const gdlCdmx = presetRoutes.find((route) => route.id === 'cdmx-morelia')!
     const version = iceVehicles
       .find((vehicle) => vehicle.id === 'vw-virtus')!
       .versions.find((item) => item.id === 'virtus-comfortline')!
