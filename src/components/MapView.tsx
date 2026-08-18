@@ -16,6 +16,11 @@ type MapViewProps = {
   onPinsChange: (origin: LatLng, dest: LatLng) => void
 }
 
+type GoogleSyncInputs = Pick<
+  MapViewProps,
+  'origin' | 'dest' | 'outboundPath' | 'inboundPath' | 'onPinsChange'
+> & { overlays: RouteOverlay[] }
+
 export function MapView(props: MapViewProps) {
   if (props.useGoogle) return <GoogleMapCanvas {...props} />
   return <OsmMapCanvas {...props} />
@@ -32,6 +37,22 @@ function GoogleMapCanvas({
   const routeOverlays = overlays ?? EMPTY_ROUTE_OVERLAYS
   const elRef = useRef<HTMLDivElement>(null)
   const mapsRef = useRef<GoogleMapRefs>({ overlayLines: [], stopMarkers: [] })
+  const latestInputsRef = useRef<GoogleSyncInputs>({
+    origin,
+    dest,
+    outboundPath,
+    inboundPath,
+    overlays: routeOverlays,
+    onPinsChange,
+  })
+  latestInputsRef.current = {
+    origin,
+    dest,
+    outboundPath,
+    inboundPath,
+    overlays: routeOverlays,
+    onPinsChange,
+  }
 
   useEffect(() => {
     const refs = mapsRef.current
@@ -42,10 +63,11 @@ function GoogleMapCanvas({
     void loadMapsJs(apiKey).then(() => {
       if (cancelled || !window.google?.maps) return
       const g = window.google.maps as unknown as GoogleMapsUi
-      const center = origin ?? dest ?? { lat: 23.6, lng: -102.5 }
+      const latestInputs = latestInputsRef.current
+      const center = latestInputs.origin ?? latestInputs.dest ?? { lat: 23.6, lng: -102.5 }
       const map = new g.Map(el, {
         center,
-        zoom: origin && dest ? 7 : 5,
+        zoom: latestInputs.origin && latestInputs.dest ? 7 : 5,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
@@ -53,27 +75,27 @@ function GoogleMapCanvas({
       refs.map = map
       const originMarker = new g.Marker({
         map,
-        position: origin ?? center,
-        draggable: Boolean(origin),
-        visible: Boolean(origin),
+        position: latestInputs.origin ?? center,
+        draggable: Boolean(latestInputs.origin),
+        visible: Boolean(latestInputs.origin),
         label: 'A',
       })
       const destMarker = new g.Marker({
         map,
-        position: dest ?? center,
-        draggable: Boolean(dest),
-        visible: Boolean(dest),
+        position: latestInputs.dest ?? center,
+        draggable: Boolean(latestInputs.dest),
+        visible: Boolean(latestInputs.dest),
         label: 'B',
       })
       originMarker.addListener('dragend', () => {
         const o = latLngOf(originMarker)
         const d = latLngOf(destMarker)
-        if (o && d) onPinsChange(o, d)
+        if (o && d) latestInputsRef.current.onPinsChange(o, d)
       })
       destMarker.addListener('dragend', () => {
         const o = latLngOf(originMarker)
         const d = latLngOf(destMarker)
-        if (o && d) onPinsChange(o, d)
+        if (o && d) latestInputsRef.current.onPinsChange(o, d)
       })
       refs.originMarker = originMarker
       refs.destMarker = destMarker
@@ -88,7 +110,14 @@ function GoogleMapCanvas({
         strokeWeight: 3,
         strokeOpacity: 0.7,
       })
-      syncGoogle(refs, origin, dest, outboundPath, inboundPath, routeOverlays)
+      syncGoogle(
+        refs,
+        latestInputs.origin,
+        latestInputs.dest,
+        latestInputs.outboundPath,
+        latestInputs.inboundPath,
+        latestInputs.overlays,
+      )
     })
     return () => {
       cancelled = true
@@ -167,6 +196,9 @@ function syncGoogle(
   clearGoogleOverlays(refs)
 
   const hasOverlays = overlays.length > 0
+  const stopOverlay = hasOverlays
+    ? overlays.find((overlay) => overlay.focused) ?? overlays[0]
+    : undefined
   if (hasOverlays) {
     refs.outLine?.setPath([])
     refs.inLine?.setPath([])
@@ -207,17 +239,18 @@ function syncGoogle(
       }
     }
 
-    const stopOverlay = overlays.find((overlay) => overlay.focused) ?? overlays[0]
-    for (const stop of stopOverlay.stops ?? []) {
-      refs.stopMarkers.push(
-        new g.Marker({
-          map: refs.map,
-          position: stop,
-          draggable: false,
-          label: 'C',
-          title: stop.name,
-        }),
-      )
+    if (stopOverlay) {
+      for (const stop of stopOverlay.stops ?? []) {
+        refs.stopMarkers.push(
+          new g.Marker({
+            map: refs.map,
+            position: stop,
+            draggable: false,
+            label: 'C',
+            title: stop.name,
+          }),
+        )
+      }
     }
   } else {
     refs.outLine?.setPath(outboundPath ?? [])
@@ -226,7 +259,10 @@ function syncGoogle(
 
   const bounds = new g.LatLngBounds()
   const pts = hasOverlays
-    ? overlays.flatMap((overlay) => [...overlay.outboundPath, ...(overlay.inboundPath ?? [])])
+    ? [
+        ...overlays.flatMap((overlay) => [...overlay.outboundPath, ...(overlay.inboundPath ?? [])]),
+        ...(stopOverlay?.stops ?? []),
+      ]
     : [...(outboundPath ?? []), ...(inboundPath ?? [])]
   if (origin) pts.push(origin)
   if (dest) pts.push(dest)
