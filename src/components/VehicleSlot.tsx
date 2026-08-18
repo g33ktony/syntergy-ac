@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
-import { RESERVE_PERCENT } from '../lib/constants'
+import { DEFAULT_HIGHWAY_KMH, RESERVE_PERCENT } from '../lib/constants'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
 import { tollCostForTripMode } from '../lib/tolls'
+import type { SlotSelection } from '../lib/slots'
 import type {
   AnyVehicle,
   AnyVersion,
@@ -17,22 +18,19 @@ import { PhevResultCard } from './PhevResultCard'
 import { PowertrainBadge } from './PowertrainBadge'
 import { ResultCard } from './ResultCard'
 
-export type SlotSelection = {
-  vehicleId: string
-  versionId: string
-}
-
 type VehicleSlotProps = {
   slotIndex: number
   vehicles: AnyVehicle[]
   selection: SlotSelection
   onChange: (next: SlotSelection) => void
+  onRemove?: () => void
   route: Route | null
   mode: TripMode
   driveStyle: DriveStyle
   pricePerKWh: number
   pricePerLiter: number
   unitSystem: UnitSystem
+  averageSpeedKmh?: number
 }
 
 /** `AnyVersion`'s variants aren't tagged; distinguish by their unique fields. */
@@ -55,6 +53,7 @@ function calcResultForVehicle(
   pricePerKWh: number,
   pricePerLiter: number,
   phevRechargeAtDestination: boolean,
+  averageSpeedKmh: number,
 ): AnyTripResult | null {
   switch (vehicle.type) {
     case 'BEV': {
@@ -76,6 +75,7 @@ function calcResultForVehicle(
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
         tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
+        averageSpeedKmh,
       })
     }
     case 'ICE':
@@ -97,6 +97,7 @@ function calcResultForVehicle(
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
         tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
+        averageSpeedKmh,
       })
     }
     case 'PHEV': {
@@ -118,6 +119,7 @@ function calcResultForVehicle(
         returnDistanceKm: route.inbound?.distanceKm,
         returnDriveHoursOneWay: route.inbound?.driveHours,
         tollCostMxn: tollCostForTripMode(route.tolls?.costMxn, mode),
+        averageSpeedKmh,
         rechargeAtDestination: phevRechargeAtDestination,
       })
     }
@@ -141,8 +143,10 @@ function renderResultCard(
   mode: TripMode,
   unitSystem: UnitSystem,
   route: Route,
+  cruiseSpeedKmh: number,
 ) {
   const routeProps = {
+    cruiseSpeedKmh,
     avgSpeedLimitKmh: route.avgSpeedLimitKmh,
     avgTravelSpeedKmh: route.avgTravelSpeedKmh,
     elevationGainM: route.outbound?.elevationGainM ?? route.elevationGainM,
@@ -187,12 +191,14 @@ export function VehicleSlot({
   vehicles,
   selection,
   onChange,
+  onRemove,
   route,
   mode,
   driveStyle,
   pricePerKWh,
   pricePerLiter,
   unitSystem,
+  averageSpeedKmh = DEFAULT_HIGHWAY_KMH,
 }: VehicleSlotProps) {
   const [phevRecharge, setPhevRecharge] = useState(false)
 
@@ -212,6 +218,7 @@ export function VehicleSlot({
           pricePerKWh,
           pricePerLiter,
           phevRecharge,
+          averageSpeedKmh,
         )
       : null
 
@@ -222,6 +229,11 @@ export function VehicleSlot({
     <section className="vehicle-slot" aria-label={`Vehículo ${slotIndex + 1}`}>
       <header className="slot-header">
         <span className="slot-index">Vehículo {slotIndex + 1}</span>
+        {onRemove ? (
+          <button type="button" className="btn-text" onClick={onRemove}>
+            Quitar
+          </button>
+        ) : null}
         {vehicle ? (
           <PowertrainBadge type={vehicle.type} fuel={versionFuel(version)} />
         ) : null}
@@ -234,6 +246,7 @@ export function VehicleSlot({
           onChange={(e) => {
             const nextVehicle = vehicles.find((v) => v.id === e.target.value)
             onChange({
+              id: selection.id,
               vehicleId: e.target.value,
               versionId: nextVehicle?.versions[0]?.id ?? '',
             })
@@ -259,6 +272,7 @@ export function VehicleSlot({
           disabled={!vehicle}
           onChange={(e) =>
             onChange({
+              id: selection.id,
               vehicleId: selection.vehicleId,
               versionId: e.target.value,
             })
@@ -308,7 +322,7 @@ export function VehicleSlot({
       ) : !vehicle || !version ? (
         <p className="slot-hint">Elige modelo y versión.</p>
       ) : result && route ? (
-        renderResultCard(result, mode, unitSystem, route)
+        renderResultCard(result, mode, unitSystem, route, averageSpeedKmh)
       ) : null}
     </section>
   )

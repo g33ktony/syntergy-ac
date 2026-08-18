@@ -12,6 +12,27 @@ function dolphinPlus(): VehicleVersion {
 }
 
 describe('calcTrip BEV', () => {
+  it('uses averageSpeedKmh for hours and scales energy vs 90 km/h', () => {
+    const version = dolphinPlus()
+    const base = {
+      distanceKm: 90,
+      version,
+      driveStyle: 'normal' as const,
+      pricePerKWh: 2,
+      reservePercent: RESERVE_PERCENT,
+      mode: 'oneWay' as const,
+      averageSpeedKmh: 90,
+    }
+    const at90 = calcTrip({ ...base, averageSpeedKmh: 90 })
+    const at77 = calcTrip({ ...base, averageSpeedKmh: 77 })
+    expect(at90.driveHours).toBeCloseTo(1, 5)
+    expect(at77.driveHours).toBeCloseTo(90 / 77, 5)
+    expect(at77.energyKWh).toBeLessThan(at90.energyKWh)
+    expect(at90.chargeStopsEstimate).toBe(0)
+    expect(at90.costPerKm).toBeCloseTo(at90.totalCostMxn / 90, 5)
+    expect(at90.co2Kg).toBeCloseTo(at90.energyKWh * 0.4, 5)
+  })
+
   it('computes one-way energy, SoC, cost, and reserve for Dolphin Mini Plus', () => {
     const version = dolphinPlus()
     // 120 km one-way, normal style: effective 10 * 0.8 * 1.0 = 8 kWh/100
@@ -22,6 +43,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     expect(result.oneWay).toBeUndefined()
@@ -33,7 +55,7 @@ describe('calcTrip BEV', () => {
       5,
     )
     expect(result.reachesWithReserve).toBe(true)
-    expect(result.chargeStopsEstimate).toBe(1)
+    expect(result.chargeStopsEstimate).toBe(0)
     expect(result.connector).toBe('GB/T')
     expect(result.driveHours).toBeCloseTo(120 / 90, 5)
   })
@@ -46,6 +68,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'oneWay' as const,
+      averageSpeedKmh: 90,
     }
 
     const eco = calcTrip({ ...base, driveStyle: 'eco' })
@@ -66,6 +89,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
 
     expect(result.oneWay).toBeDefined()
@@ -80,8 +104,8 @@ describe('calcTrip BEV', () => {
       5,
     )
     // per-leg stops still based on one-way distance
-    expect(result.chargeStopsEstimate).toBe(1)
-    expect(result.chargeStopsRoundTripEstimate).toBe(2)
+    expect(result.chargeStopsEstimate).toBe(0)
+    expect(result.chargeStopsRoundTripEstimate).toBe(0)
     expect(result.reachesWithReserve).toBe(
       result.arrivalSocPercent >= RESERVE_PERCENT,
     )
@@ -97,6 +121,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
 
     expect(result.arrivalSocPercent).toBeLessThan(RESERVE_PERCENT)
@@ -112,6 +137,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
     const climbing = calcTrip({
       distanceKm: 100,
@@ -120,6 +146,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
       elevationGainM: 800,
       elevationLossM: 0,
     })
@@ -139,6 +166,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
     const downhillOneWay = calcTrip({
       distanceKm: 100,
@@ -147,6 +175,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
       elevationGainM: 0,
       elevationLossM: 500,
     })
@@ -166,6 +195,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
       tollCostMxn: 320,
     })
     expect(result.costMxn).toBeCloseTo(19.2, 5)
@@ -182,6 +212,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
       elevationGainM: 400,
       elevationLossM: 50,
     })
@@ -192,6 +223,7 @@ describe('calcTrip BEV', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
       elevationGainM: 400,
       elevationLossM: 50,
       returnElevationGainM: 10,

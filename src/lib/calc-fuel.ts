@@ -1,27 +1,21 @@
-import {
-  DEFAULT_HIGHWAY_KMH,
-  DRIVE_STYLE_MULTIPLIERS,
-  FUEL_MX_FACTOR,
-} from './constants'
-import { attachTripCosts } from './trip-costs'
+import { DRIVE_STYLE_MULTIPLIERS, FUEL_MX_FACTOR } from './constants'
+import { attachCompareMetrics, attachTripCosts } from './trip-costs'
 import { calcTankFeasibility } from './calc-tank'
 import { elevationFuelDeltaLiters } from './elevation'
+import { tripCo2Kg } from './co2'
+import { clampSpeedKmh, speedConsumptionFactor } from './speed-factor'
 import type { FuelTripInput, FuelTripResult, FuelTripResultBase } from '../types'
 
 function driveHoursForDistance(
   distanceKm: number,
-  driveHoursOneWay?: number,
+  averageSpeedKmh: number,
 ): number {
-  if (driveHoursOneWay != null && driveHoursOneWay > 0) {
-    return driveHoursOneWay
-  }
-  return distanceKm / DEFAULT_HIGHWAY_KMH
+  return distanceKm / clampSpeedKmh(averageSpeedKmh)
 }
 
 function calcOneWay(
   input: FuelTripInput,
   distanceKm = input.distanceKm,
-  driveHoursOneWay = input.driveHoursOneWay,
   elevationGainM = input.elevationGainM,
   tollCostMxn = 0,
 ): FuelTripResultBase {
@@ -29,7 +23,10 @@ function calcOneWay(
 
   const styleMult = DRIVE_STYLE_MULTIPLIERS[driveStyle]
   const consumptionEffective =
-    version.consumptionLPer100 * FUEL_MX_FACTOR * styleMult
+    version.consumptionLPer100 *
+    FUEL_MX_FACTOR *
+    styleMult *
+    speedConsumptionFactor(input.averageSpeedKmh)
   const baseLiters = (distanceKm * consumptionEffective) / 100
   const litersUsed = Math.max(
     0,
@@ -37,10 +34,10 @@ function calcOneWay(
   )
   const tank = calcTankFeasibility(litersUsed, version.tankLiters)
 
-  return attachTripCosts(
+  const priced = attachTripCosts(
     {
       distanceKm,
-      driveHours: driveHoursForDistance(distanceKm, driveHoursOneWay),
+      driveHours: driveHoursForDistance(distanceKm, input.averageSpeedKmh),
       litersUsed,
       costMxn: litersUsed * pricePerLiter,
       ...tank,
@@ -48,18 +45,17 @@ function calcOneWay(
     },
     tollCostMxn,
   )
+  return attachCompareMetrics(priced, tripCo2Kg({ liters: litersUsed }))
 }
 
 /**
  * Pure trip calculator for ICE and HEV versions (Phase 2).
- * No React / I/O — safe to unit-test. Mirrors calcTrip's BEV shape
- * (energy → liters, SoC → tank %, charge stops → fuel stops).
+ * No React / I/O — safe to unit-test.
  */
 export function calcFuelTrip(input: FuelTripInput): FuelTripResult {
   const oneWay = calcOneWay(
     input,
     input.distanceKm,
-    input.driveHoursOneWay,
     input.elevationGainM,
     input.mode === 'oneWay' ? input.tollCostMxn : 0,
   )
@@ -70,15 +66,9 @@ export function calcFuelTrip(input: FuelTripInput): FuelTripResult {
 
   const returnDistance = input.returnDistanceKm ?? input.distanceKm
   const returnGain = input.returnElevationGainM ?? input.elevationLossM
-  const returnLeg = calcOneWay(
-    input,
-    returnDistance,
-    input.returnDriveHoursOneWay ?? input.driveHoursOneWay,
-    returnGain,
-    0,
-  )
+  const returnLeg = calcOneWay(input, returnDistance, returnGain, 0)
   const litersUsed = oneWay.litersUsed + returnLeg.litersUsed
-  const roundTrip = attachTripCosts(
+  const priced = attachTripCosts(
     {
       distanceKm: oneWay.distanceKm + returnLeg.distanceKm,
       driveHours: oneWay.driveHours + returnLeg.driveHours,
@@ -91,7 +81,7 @@ export function calcFuelTrip(input: FuelTripInput): FuelTripResult {
   )
 
   return {
-    ...roundTrip,
+    ...attachCompareMetrics(priced, tripCo2Kg({ liters: litersUsed })),
     oneWay,
   }
 }

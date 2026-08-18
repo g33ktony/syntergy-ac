@@ -151,6 +151,8 @@ export type TripInput = {
   returnDriveHoursOneWay?: number
   /** Casetas for this trip (ida, or ida+vuelta if already summed). */
   tollCostMxn?: number
+  /** Cruise speed used for hours and consumption (clamped 40–130). */
+  averageSpeedKmh: number
 }
 
 export type TripResultBase = {
@@ -166,6 +168,8 @@ export type TripResultBase = {
   chargeStopsEstimate: number
   chargeStopsRoundTripEstimate?: number
   connector: string
+  costPerKm: number
+  co2Kg: number
 }
 
 export type TripResult = TripResultBase & {
@@ -257,6 +261,7 @@ export type FuelTripInput = {
   returnDistanceKm?: number
   returnDriveHoursOneWay?: number
   tollCostMxn?: number
+  averageSpeedKmh: number
 }
 
 export type FuelTripResultBase = {
@@ -266,6 +271,8 @@ export type FuelTripResultBase = {
   costMxn: number
   tollCostMxn: number
   totalCostMxn: number
+  costPerKm: number
+  co2Kg: number
   arrivalFuelPercent: number
   reachesWithoutStop: boolean
   fuelStopsEstimate: number
@@ -293,6 +300,7 @@ export type PhevTripInput = {
   returnDistanceKm?: number
   returnDriveHoursOneWay?: number
   tollCostMxn?: number
+  averageSpeedKmh: number
 }
 
 export type PhevTripResultBase = {
@@ -305,6 +313,8 @@ export type PhevTripResultBase = {
   costMxn: number
   tollCostMxn: number
   totalCostMxn: number
+  costPerKm: number
+  co2Kg: number
   arrivalFuelPercent: number
   reachesWithoutStop: boolean
   fuelStopsEstimate: number

@@ -16,6 +16,7 @@ describe('calcAnyTrip dispatcher', () => {
       pricePerKWh: 2,
       reservePercent: RESERVE_PERCENT,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
     expect('arrivalSocPercent' in result).toBe(true)
   })
@@ -29,6 +30,7 @@ describe('calcAnyTrip dispatcher', () => {
       driveStyle: 'normal',
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
     expect('litersUsed' in result).toBe(true)
   })
@@ -43,6 +45,7 @@ describe('calcAnyTrip dispatcher', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'oneWay',
+      averageSpeedKmh: 90,
     })
     expect('electricKmUsed' in result).toBe(true)
 
@@ -66,6 +69,7 @@ describe('calcAnyTrip dispatcher', () => {
       pricePerKWh: 2,
       pricePerLiter: 24,
       mode: 'roundTrip',
+      averageSpeedKmh: 90,
     })
     const row = toComparisonRow('t', 'v', 'PHEV', result)
     expect(result.vehicleType).toBe('PHEV')
