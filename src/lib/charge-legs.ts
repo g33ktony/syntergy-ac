@@ -77,7 +77,7 @@ export async function lookupTripViaStops(options: LookupTripViaStopsOptions): Pr
       from: placeLabel(options.origin),
       to: placeLabel(options.dest),
       path: outbound.path,
-      roundTrip: options.roundTrip,
+      roundTrip: false,
     })
 
     return {
