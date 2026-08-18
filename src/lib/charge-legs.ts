@@ -2,7 +2,13 @@ import { DRIVE_STYLE_MULTIPLIERS, MX_FACTOR } from './constants'
 import { speedConsumptionFactor } from './speed-factor'
 import { estimateTolls } from './tolls'
 import { placeLabel } from './place'
-import type { lookupTrip } from './providers/lookup-trip'
+import {
+  getAbrpApiKey,
+  getGoogleApiKey,
+  getOpenChargeMapApiKey,
+  getOrsApiKey,
+} from './config'
+import { lookupTrip } from './providers/lookup-trip'
 import type { ChargingPoi, DriveStyle, LatLng, PlaceRef, Route, RouteLeg, RouteSourcePreference } from '../types'
 
 export function bevKWhPerKm(input: {
@@ -20,6 +26,10 @@ export type LookupTripViaStopsOptions = {
   origin: PlaceRef
   dest: PlaceRef
   stops: ChargingPoi[]
+  /** When set (including `[]`), used for the return instead of reversing `stops`. */
+  inboundStops?: ChargingPoi[]
+  /** Reuse a previously stitched outbound instead of fetching origin→stops→dest again. */
+  outboundRoute?: Route
   roundTrip: boolean
   preference: RouteSourcePreference
   lookup: typeof lookupTrip
@@ -68,9 +78,31 @@ export async function lookupTripViaStops(options: LookupTripViaStopsOptions): Pr
   const outboundWaypoints: PlaceRef[] = [options.origin, ...stopPlaces(options.stops), options.dest]
 
   try {
-    const outbound = await stitchLegs(outboundWaypoints, options)
+    const outbound = options.outboundRoute?.outbound
+      ? {
+          distanceKm: options.outboundRoute.distanceKm,
+          driveHours:
+            options.outboundRoute.driveHoursOneWay ?? options.outboundRoute.outbound.driveHours,
+          path: options.outboundRoute.outbound.path,
+          elevationGainM:
+            options.outboundRoute.outbound.elevationGainM ??
+            options.outboundRoute.elevationGainM ??
+            0,
+          elevationLossM:
+            options.outboundRoute.outbound.elevationLossM ??
+            options.outboundRoute.elevationLossM ??
+            0,
+        }
+      : await stitchLegs(outboundWaypoints, options)
+    const inboundStopList =
+      options.inboundStops !== undefined
+        ? options.inboundStops
+        : [...options.stops].reverse()
     const inbound = options.roundTrip
-      ? await stitchLegs([options.dest, ...stopPlaces([...options.stops].reverse()), options.origin], options)
+      ? await stitchLegs(
+          [options.dest, ...stopPlaces(inboundStopList), options.origin],
+          options,
+        )
       : undefined
 
     const tolls = estimateTolls({
@@ -93,8 +125,25 @@ export async function lookupTripViaStops(options: LookupTripViaStopsOptions): Pr
       inbound,
       likelyTolls: tolls.likelyTolls,
       tolls,
+      chargingPois: [...options.stops, ...(options.inboundStops ?? [])],
     }
   } catch {
     return null
   }
+}
+
+export function lookupTripViaStopsFromConfig(
+  options: Omit<
+    LookupTripViaStopsOptions,
+    'lookup' | 'googleKey' | 'abrpKey' | 'orsKey' | 'ocmKey'
+  >,
+): Promise<Route | null> {
+  return lookupTripViaStops({
+    ...options,
+    lookup: lookupTrip,
+    googleKey: getGoogleApiKey(),
+    abrpKey: getAbrpApiKey(),
+    orsKey: getOrsApiKey(),
+    ocmKey: getOpenChargeMapApiKey(),
+  })
 }
