@@ -172,6 +172,73 @@ describe('lookupTripViaStops', () => {
     expect(oneWay?.inbound).toBeUndefined()
   })
 
+  it('stitches inbound through inboundStops instead of reversing outbound stops', async () => {
+    const outboundStop: ChargingPoi = { id: 'out', name: 'Out', lat: 20, lng: -100 }
+    const inboundStop: ChargingPoi = { id: 'in', name: 'In', lat: 20.5, lng: -100.5 }
+    const calls: string[] = []
+    const lookup = async (options: LookupTripOptions): Promise<Route> => {
+      const from = options.query.from as { lat: number; lng: number }
+      const to = options.query.to as { lat: number; lng: number }
+      calls.push(`${from.lat}->${to.lat}`)
+      return {
+        id: 'leg',
+        from: 'a',
+        to: 'b',
+        distanceKm: 50,
+        source: 'osm',
+        outbound: { distanceKm: 50, driveHours: 0.5, path: [from, to] },
+      }
+    }
+
+    const route = await lookupTripViaStops({
+      origin: { lat: 19, lng: -99 },
+      dest: { lat: 21, lng: -101 },
+      stops: [outboundStop],
+      inboundStops: [inboundStop],
+      roundTrip: true,
+      preference: 'both',
+      lookup,
+    })
+
+    expect(calls).toEqual(['19->20', '20->21', '21->20.5', '20.5->19'])
+    expect(route?.chargingPois?.map((p) => p.id)).toEqual(['out', 'in'])
+    expect(route?.inbound?.path).toEqual([
+      { lat: 21, lng: -101 },
+      { lat: 20.5, lng: -100.5 },
+      { lat: 19, lng: -99 },
+    ])
+  })
+
+  it('does not reverse outbound stops when inboundStops is empty', async () => {
+    const outboundStop: ChargingPoi = { id: 'out', name: 'Out', lat: 20, lng: -100 }
+    const calls: string[] = []
+    const lookup = async (options: LookupTripOptions): Promise<Route> => {
+      const from = options.query.from as { lat: number; lng: number }
+      const to = options.query.to as { lat: number; lng: number }
+      calls.push(`${from.lat}->${to.lat}`)
+      return {
+        id: 'leg',
+        from: 'a',
+        to: 'b',
+        distanceKm: 50,
+        source: 'osm',
+        outbound: { distanceKm: 50, driveHours: 0.5, path: [from, to] },
+      }
+    }
+
+    await lookupTripViaStops({
+      origin: { lat: 19, lng: -99 },
+      dest: { lat: 21, lng: -101 },
+      stops: [outboundStop],
+      inboundStops: [],
+      roundTrip: true,
+      preference: 'both',
+      lookup,
+    })
+
+    expect(calls).toEqual(['19->20', '20->21', '21->19'])
+  })
+
   it('returns null when a leg fails', async () => {
     const lookup = async (): Promise<Route> => {
       throw new Error('network down')

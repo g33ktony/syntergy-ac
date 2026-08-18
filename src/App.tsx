@@ -175,9 +175,12 @@ function App() {
                       prev.filter((slot) => slot.id !== selection.id),
                     )
                     setSlotRoutes((prev) => prev.filter((_, i) => i !== index))
-                    setFocusedSlotIndex((prev) =>
-                      prev === index ? null : prev,
-                    )
+                    setFocusedSlotIndex((prev) => {
+                      if (prev === null) return null
+                      if (prev === index) return null
+                      if (prev > index) return prev - 1
+                      return prev
+                    })
                   }
                 : undefined
             }

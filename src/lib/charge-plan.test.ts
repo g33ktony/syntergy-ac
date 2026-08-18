@@ -43,6 +43,7 @@ describe('planChargeStops', () => {
     expect(plan.feasible).toBe(true)
     expect(plan.stops).toEqual([])
     expect(plan.reason).toBe('already-feasible')
+    expect(plan.arrivalSocPercent).toBeCloseTo(100 - (100 * 80 * 0.08) / 38)
   })
 
   function poi(id: string, alongKm: number, connectors: string[] = ['GB/T']): ChargingPoi {
@@ -65,6 +66,7 @@ describe('planChargeStops', () => {
     expect(plan.feasible).toBe(true)
     expect(plan.stops).toHaveLength(1)
     expect(plan.stops[0].poi.id).toBe('window')
+    expect(plan.arrivalSocPercent).toBeCloseTo(80 - (100 * 80 * 0.2) / 60)
   })
 
   it('returns no-poi when the only in-window POI has the wrong connector', () => {
@@ -118,5 +120,42 @@ describe('planChargeStops', () => {
     expect(plan.feasible).toBe(false)
     expect(plan.reason).toBe('max-stops')
     expect(plan.stops).toHaveLength(1)
+  })
+
+  it('plans inbound from post-outbound arrival SoC rather than a full charge', () => {
+    const shared = {
+      path,
+      pois: [poi('near-dest', 180), poi('near-origin', 20)],
+      batteryKWh: 60,
+      kWhPerKm: 0.2,
+      reservePercent: 15,
+      chargeToPercent: 80,
+      maxStops: 6,
+      connector: 'GB/T' as const,
+    }
+    const outbound = planChargeStops({
+      ...shared,
+      pathLengthKm: 200,
+      startSocPercent: 100,
+    })
+    expect(outbound.feasible).toBe(true)
+    expect(outbound.stops).toEqual([])
+    expect(outbound.reason).toBe('already-feasible')
+
+    const inboundFromFull = planChargeStops({
+      ...shared,
+      pathLengthKm: 200,
+      startSocPercent: 100,
+    })
+    expect(inboundFromFull.reason).toBe('already-feasible')
+
+    const inboundFromArrival = planChargeStops({
+      ...shared,
+      pathLengthKm: 200,
+      pois: shared.pois.map((p) => ({ ...p, alongKm: 200 - (p.alongKm as number) })),
+      startSocPercent: outbound.arrivalSocPercent,
+    })
+    expect(inboundFromArrival.feasible).toBe(true)
+    expect(inboundFromArrival.stops.map((s) => s.poi.id)).toEqual(['near-dest'])
   })
 })

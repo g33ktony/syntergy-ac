@@ -17,6 +17,8 @@ export type ChargePlan = {
   feasible: boolean
   stops: ChargePlanStop[]
   reason?: 'already-feasible' | 'no-poi' | 'max-stops'
+  /** SoC at the end of this path after the planned stops. */
+  arrivalSocPercent: number
 }
 
 export type ChargePlanInput = {
@@ -61,11 +63,12 @@ export function planChargeStops(input: ChargePlanInput): ChargePlan {
         feasible: true,
         stops,
         reason: stops.length === 0 ? 'already-feasible' : undefined,
+        arrivalSocPercent: arrivalSoc,
       }
     }
 
     if (stops.length >= maxStops) {
-      return { feasible: false, stops, reason: 'max-stops' }
+      return { feasible: false, stops, reason: 'max-stops', arrivalSocPercent: arrivalSoc }
     }
 
     const usableKWh = (batteryKWh * (soc - reservePercent)) / 100
@@ -83,7 +86,7 @@ export function planChargeStops(input: ChargePlanInput): ChargePlan {
     )
 
     if (inWindow.length === 0) {
-      return { feasible: false, stops, reason: 'no-poi' }
+      return { feasible: false, stops, reason: 'no-poi', arrivalSocPercent: arrivalSoc }
     }
 
     const chosen = inWindow.reduce((best, poi) =>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { calcAnyTrip, type AnyTripResult } from '../lib/calc'
 import {
   CHARGE_TARGET_PERCENT,
@@ -7,13 +7,14 @@ import {
   RESERVE_PERCENT,
 } from '../lib/constants'
 import { bevKWhPerKm, lookupTripViaStopsFromConfig } from '../lib/charge-legs'
-import { planChargeStops } from '../lib/charge-plan'
+import { planChargeStops, type ChargePlan } from '../lib/charge-plan'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
 import { tollCostForTripMode } from '../lib/tolls'
 import type { SlotSelection } from '../lib/slots'
 import type {
   AnyVehicle,
   AnyVersion,
+  ChargingPoi,
   DriveStyle,
   FuelType,
   Route,
@@ -141,6 +142,12 @@ function versionFuel(version: AnyVersion | null): FuelType | undefined {
   return version && 'fuel' in version ? version.fuel : undefined
 }
 
+function chargePlanFailureMessage(reason: ChargePlan['reason']) {
+  return reason === 'max-stops'
+    ? 'No se pudo completar el viaje con el máximo de paradas.'
+    : 'No se encontró un cargador compatible en la ruta.'
+}
+
 function vehiclesByPowertrain(vehicles: AnyVehicle[]) {
   return POWERTRAIN_GROUP_ORDER.map((type) => ({
     type,
@@ -218,6 +225,8 @@ export function VehicleSlot({
   const [viaStopsRoute, setViaStopsRoute] = useState<Route | null>(null)
   const [chargePlanError, setChargePlanError] = useState<string | null>(null)
   const [chargePlanBusy, setChargePlanBusy] = useState(false)
+  const onSlotRouteChangeRef = useRef(onSlotRouteChange)
+  onSlotRouteChangeRef.current = onSlotRouteChange
 
   const vehicle: AnyVehicle | null =
     vehicles.find((v) => v.id === selection.vehicleId) ?? null
@@ -251,10 +260,17 @@ export function VehicleSlot({
   }, [showChargeStopsToggle])
 
   useEffect(() => {
-    if (chargeMode !== 'withStops' || !route || vehicle?.type !== 'BEV' || !version) {
+    let cancelled = false
+
+    const clearChargeRoute = () => {
       setViaStopsRoute(null)
-      onSlotRouteChange?.(null)
+      onSlotRouteChangeRef.current?.(null)
+    }
+
+    if (chargeMode !== 'withStops' || !route || vehicle?.type !== 'BEV' || !version) {
+      clearChargeRoute()
       setChargePlanError(null)
+      setChargePlanBusy(false)
       return
     }
     const bevVersion = version as Extract<AnyVersion, { batteryKWh: number; connector: string }>
@@ -263,10 +279,11 @@ export function VehicleSlot({
     const path = route.outbound?.path
     if (!path || path.length === 0) {
       setChargePlanError('La ruta no tiene geometría; no se pueden planear cargas.')
+      clearChargeRoute()
+      setChargePlanBusy(false)
       return
     }
 
-    let cancelled = false
     setChargePlanBusy(true)
     setChargePlanError(null)
 
@@ -276,32 +293,64 @@ export function VehicleSlot({
       averageSpeedKmh,
     })
 
-    const plan = planChargeStops({
-      path,
-      pathLengthKm: route.distanceKm,
+    const planInput = {
       pois: route.chargingPois ?? [],
       batteryKWh: bevVersion.batteryKWh,
       kWhPerKm,
       reservePercent: RESERVE_PERCENT,
-      startSocPercent: 100,
       chargeToPercent: CHARGE_TARGET_PERCENT,
       maxStops: MAX_CHARGE_STOPS,
       connector: bevVersion.connector,
+    }
+
+    const outboundPlan = planChargeStops({
+      ...planInput,
+      path,
+      pathLengthKm: route.distanceKm,
+      startSocPercent: 100,
     })
 
-    if (!plan.feasible && plan.stops.length === 0) {
+    if (!outboundPlan.feasible) {
       setChargePlanBusy(false)
-      setChargePlanError('No se encontró un cargador compatible en la ruta.')
-      setViaStopsRoute(null)
-      onSlotRouteChange?.(null)
+      setChargePlanError(chargePlanFailureMessage(outboundPlan.reason))
+      clearChargeRoute()
       return
+    }
+
+    let inboundStops: ChargingPoi[] | undefined
+    if (mode === 'roundTrip') {
+      const inboundLengthKm = route.inbound?.distanceKm ?? route.distanceKm
+      const inboundPath =
+        route.inbound?.path && route.inbound.path.length > 0
+          ? route.inbound.path
+          : [...path].reverse()
+      const inboundPois = planInput.pois.map((poi) =>
+        poi.alongKm === undefined
+          ? poi
+          : { ...poi, alongKm: inboundLengthKm - poi.alongKm },
+      )
+      const inboundPlan = planChargeStops({
+        ...planInput,
+        path: inboundPath,
+        pathLengthKm: inboundLengthKm,
+        pois: inboundPois,
+        startSocPercent: outboundPlan.arrivalSocPercent,
+      })
+      if (!inboundPlan.feasible) {
+        setChargePlanBusy(false)
+        setChargePlanError(chargePlanFailureMessage(inboundPlan.reason))
+        clearChargeRoute()
+        return
+      }
+      inboundStops = inboundPlan.stops.map((s) => s.poi)
     }
 
     void (async () => {
       const stitched = await lookupTripViaStopsFromConfig({
         origin,
         dest,
-        stops: plan.stops.map((s) => s.poi),
+        stops: outboundPlan.stops.map((s) => s.poi),
+        inboundStops,
         roundTrip: mode === 'roundTrip',
         preference: 'both',
       })
@@ -309,18 +358,16 @@ export function VehicleSlot({
       setChargePlanBusy(false)
       if (!stitched) {
         setChargePlanError('No se pudo trazar la ruta con paradas de carga. Se usa la ruta base.')
-        setViaStopsRoute(null)
-        onSlotRouteChange?.(null)
+        clearChargeRoute()
         return
       }
       setViaStopsRoute(stitched)
-      onSlotRouteChange?.(stitched)
+      onSlotRouteChangeRef.current?.(stitched)
     })()
 
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chargeMode, route, vehicle, version, driveStyle, averageSpeedKmh, mode])
 
   const activeRoute = chargeMode === 'withStops' && viaStopsRoute ? viaStopsRoute : route
@@ -353,7 +400,15 @@ export function VehicleSlot({
       <header className="slot-header">
         <span className="slot-index">Vehículo {slotIndex + 1}</span>
         {onRemove ? (
-          <button type="button" className="btn-text" onClick={onRemove}>
+          <button
+            type="button"
+            className="btn-text"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            onFocus={(e) => e.stopPropagation()}
+          >
             Quitar
           </button>
         ) : null}
