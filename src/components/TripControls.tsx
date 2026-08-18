@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { routeLabel } from '../data/routes'
-import { MAX_SPEED_KMH, MIN_SPEED_KMH } from '../lib/constants'
-import { clampSpeedKmh } from '../lib/speed-factor'
-import { formatTripUnits, kmhToMph, miToKm } from '../lib/units'
+import {
+  commitSpeedKmh,
+  formatSpeedDraft,
+  liveSpeedKmhFromDraft,
+} from '../lib/speed-input'
+import { formatTripUnits } from '../lib/units'
 import type {
   DriveStyle,
   Route,
@@ -58,39 +61,27 @@ export function TripControls({
 }: TripControlsProps) {
   const styleIndex = DRIVE_STYLE_OPTIONS.findIndex((o) => o.value === driveStyle)
 
-  const displayedSpeed =
-    unitSystem === 'imperial'
-      ? Math.round(kmhToMph(averageSpeedKmh))
-      : Math.round(averageSpeedKmh)
-  const [speedDraft, setSpeedDraft] = useState(String(displayedSpeed))
+  const displayedSpeed = formatSpeedDraft(averageSpeedKmh, unitSystem)
+  const [speedDraft, setSpeedDraft] = useState(displayedSpeed)
+  const [speedFocused, setSpeedFocused] = useState(false)
 
   useEffect(() => {
-    setSpeedDraft(String(displayedSpeed))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayedSpeed])
+    if (speedFocused) return
+    setSpeedDraft(displayedSpeed)
+  }, [displayedSpeed, speedFocused])
 
-  /** Live-applies each keystroke unclamped (calc functions clamp internally);
-   * clamping here would fight the user mid-type (e.g. "9" of "90" snapping to
-   * the 40 floor) on every platform, and especially on mobile where there's
-   * no arrow key to nudge back out of the snap. */
+  /** Keep a local draft so partial keystrokes ("9" of "90") never rewrite
+   * parent speed. Live-apply only in-range values; clamp/revert on blur. */
   function handleSpeedChange(raw: string) {
     setSpeedDraft(raw)
-    if (raw.trim() === '') return
-    const n = Number(raw)
-    if (!Number.isFinite(n)) return
-    const kmh = unitSystem === 'imperial' ? miToKm(n) : n
-    onAverageSpeedChange(kmh)
+    const live = liveSpeedKmhFromDraft(raw, unitSystem)
+    if (live != null) onAverageSpeedChange(live)
   }
 
-  /** Safety net once the user is done: clamp into range, or revert if empty/invalid. */
   function commitSpeedDraft() {
-    const n = Number(speedDraft)
-    if (speedDraft.trim() === '' || !Number.isFinite(n)) {
-      setSpeedDraft(String(displayedSpeed))
-      return
-    }
-    const kmh = unitSystem === 'imperial' ? miToKm(n) : n
-    onAverageSpeedChange(clampSpeedKmh(kmh))
+    const next = commitSpeedKmh(speedDraft, unitSystem, averageSpeedKmh)
+    onAverageSpeedChange(next)
+    setSpeedDraft(formatSpeedDraft(next, unitSystem))
   }
 
   return (
@@ -160,20 +151,15 @@ export function TripControls({
           </span>
           <input
             type="number"
-            min={
-              unitSystem === 'imperial'
-                ? Math.round(kmhToMph(MIN_SPEED_KMH))
-                : MIN_SPEED_KMH
-            }
-            max={
-              unitSystem === 'imperial'
-                ? Math.round(kmhToMph(MAX_SPEED_KMH))
-                : MAX_SPEED_KMH
-            }
+            inputMode="numeric"
             step={1}
             value={speedDraft}
             onChange={(e) => handleSpeedChange(e.target.value)}
-            onBlur={commitSpeedDraft}
+            onFocus={() => setSpeedFocused(true)}
+            onBlur={() => {
+              commitSpeedDraft()
+              setSpeedFocused(false)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') commitSpeedDraft()
             }}

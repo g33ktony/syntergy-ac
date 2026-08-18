@@ -133,7 +133,7 @@ type TripResult = {
 
 ## 6. Calculations (Phase 1)
 
-1. **Base MX factor:** apply to official consumption, e.g. `consumptionEffective = consumptionOfficial * mxFactor` with `mxFactor ≈ 0.80` (calibrated so a known Dolphin Mini Plus trip lands near ~40% used when distance matches user experience). Exact constant tunable in one place.
+1. **Base MX factor:** apply to official consumption, e.g. `consumptionEffective = consumptionOfficial * mxFactor` with `mxFactor ≈ 1.3` (ABRP-calibrated so highway use runs above official NEDC/CLTC; BEV `MX_FACTOR` and liquid-fuel `FUEL_MX_FACTOR` are independently tunable). Exact constants live in `src/lib/constants.ts`.
 2. **Drive style multipliers:** eco `0.90`, normal `1.00`, aggressive `1.15` (tunable).
 3. **Energy one-way:** `distanceKm * (consumptionEffective * styleMult) / 100`.
 4. **Arrival SoC:** `100 - (energy / batteryKWh * 100)`.
