@@ -218,6 +218,7 @@ function syncGoogle(
             strokeColor: style.color,
             strokeWeight: style.weight,
             strokeOpacity: style.dashArray ? 0 : style.opacity,
+            zIndex: overlay.focused ? 2 : 1,
             ...(style.dashArray
               ? {
                   icons: [
