@@ -16,7 +16,7 @@ type MapViewProps = {
   onPinsChange: (origin: LatLng, dest: LatLng) => void
 }
 
-type GoogleSyncInputs = Pick<
+type MapSyncInputs = Pick<
   MapViewProps,
   'origin' | 'dest' | 'outboundPath' | 'inboundPath' | 'onPinsChange'
 > & { overlays: RouteOverlay[] }
@@ -37,7 +37,7 @@ function GoogleMapCanvas({
   const routeOverlays = overlays ?? EMPTY_ROUTE_OVERLAYS
   const elRef = useRef<HTMLDivElement>(null)
   const mapsRef = useRef<GoogleMapRefs>({ overlayLines: [], stopMarkers: [] })
-  const latestInputsRef = useRef<GoogleSyncInputs>({
+  const latestInputsRef = useRef<MapSyncInputs>({
     origin,
     dest,
     outboundPath,
@@ -137,7 +137,7 @@ function GoogleMapCanvas({
 type googleMap = { fitBounds: (b: unknown) => void }
 type googleMarker = {
   setPosition: (p: LatLng) => void
-  getPosition: () => { lat: () => number; lng: () => number } | null
+  getPosition: () => { lat: () => number; lng: () => number } | null | undefined
   addListener: (ev: string, fn: () => void) => void
   setVisible: (visible: boolean) => void
   setDraggable: (draggable: boolean) => void
@@ -227,6 +227,7 @@ function syncGoogle(
                         strokeColor: style.color,
                         strokeOpacity: style.opacity,
                         scale: 4,
+                        strokeWeight: style.weight,
                       },
                       offset: '0',
                       repeat: '14px',
@@ -289,8 +290,25 @@ function OsmMapCanvas({
   const routeOverlays = overlays ?? EMPTY_ROUTE_OVERLAYS
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<OsmMapRefs>({ overlayLines: [], stopMarkers: [] })
+  const latestInputsRef = useRef<MapSyncInputs>({
+    origin,
+    dest,
+    outboundPath,
+    inboundPath,
+    overlays: routeOverlays,
+    onPinsChange,
+  })
+  latestInputsRef.current = {
+    origin,
+    dest,
+    outboundPath,
+    inboundPath,
+    overlays: routeOverlays,
+    onPinsChange,
+  }
 
   useEffect(() => {
+    const refs = mapRef.current
     const el = elRef.current
     if (!el) return
     let cancelled = false
@@ -298,10 +316,11 @@ function OsmMapCanvas({
       await import('leaflet/dist/leaflet.css')
       await import('../map-overlays.css')
       if (cancelled || !elRef.current) return
-      const center = origin ?? dest ?? { lat: 23.6, lng: -102.5 }
+      const latestInputs = latestInputsRef.current
+      const center = latestInputs.origin ?? latestInputs.dest ?? { lat: 23.6, lng: -102.5 }
       const map = L.map(elRef.current).setView(
         [center.lat, center.lng],
-        origin && dest ? 7 : 5,
+        latestInputs.origin && latestInputs.dest ? 7 : 5,
       )
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
@@ -319,40 +338,51 @@ function OsmMapCanvas({
         iconAnchor: [14, 14],
       })
       const originMarker = L.marker([center.lat, center.lng], {
-        draggable: Boolean(origin),
+        draggable: Boolean(latestInputs.origin),
         icon: originIcon,
       })
       const destMarker = L.marker([center.lat, center.lng], {
-        draggable: Boolean(dest),
+        draggable: Boolean(latestInputs.dest),
         icon: destIcon,
       })
-      if (origin) originMarker.addTo(map)
-      if (dest) destMarker.addTo(map)
+      if (latestInputs.origin) originMarker.addTo(map)
+      if (latestInputs.dest) destMarker.addTo(map)
       originMarker.on('dragend', () => {
         const o = originMarker.getLatLng()
         const d = destMarker.getLatLng()
-        onPinsChange({ lat: o.lat, lng: o.lng }, { lat: d.lat, lng: d.lng })
+        latestInputsRef.current.onPinsChange(
+          { lat: o.lat, lng: o.lng },
+          { lat: d.lat, lng: d.lng },
+        )
       })
       destMarker.on('dragend', () => {
         const o = originMarker.getLatLng()
         const d = destMarker.getLatLng()
-        onPinsChange({ lat: o.lat, lng: o.lng }, { lat: d.lat, lng: d.lng })
+        latestInputsRef.current.onPinsChange(
+          { lat: o.lat, lng: o.lng },
+          { lat: d.lat, lng: d.lng },
+        )
       })
-      mapRef.current = {
-        map,
-        leaflet: L,
-        originMarker,
-        destMarker,
-        outLine: L.polyline([], { color: '#1c4b73', weight: 4 }).addTo(map),
-        inLine: L.polyline([], { color: '#8a4b12', weight: 3, opacity: 0.7 }).addTo(map),
-        overlayLines: [],
-        stopMarkers: [],
-      }
-      syncOsm(mapRef.current, origin, dest, outboundPath, inboundPath, routeOverlays)
+      refs.map = map
+      refs.leaflet = L
+      refs.originMarker = originMarker
+      refs.destMarker = destMarker
+      refs.outLine = L.polyline([], { color: '#1c4b73', weight: 4 }).addTo(map)
+      refs.inLine = L.polyline([], { color: '#8a4b12', weight: 3, opacity: 0.7 }).addTo(map)
+      refs.overlayLines = []
+      refs.stopMarkers = []
+      syncOsm(
+        refs,
+        latestInputs.origin,
+        latestInputs.dest,
+        latestInputs.outboundPath,
+        latestInputs.inboundPath,
+        latestInputs.overlays,
+      )
     })
     return () => {
       cancelled = true
-      mapRef.current.map?.remove()
+      refs.map?.remove()
       mapRef.current = { overlayLines: [], stopMarkers: [] }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -407,6 +437,9 @@ function syncOsm(
   refs.stopMarkers = []
 
   const hasOverlays = overlays.length > 0
+  const stopOverlay = hasOverlays
+    ? overlays.find((overlay) => overlay.focused) ?? overlays[0]
+    : undefined
   if (hasOverlays) {
     refs.outLine?.setLatLngs([])
     refs.inLine?.setLatLngs([])
@@ -433,14 +466,13 @@ function syncOsm(
       }
     }
 
-    const stopOverlay = overlays.find((overlay) => overlay.focused) ?? overlays[0]
     const stopIcon = L.divIcon({
       className: 'map-stop',
       html: '',
       iconSize: [12, 12],
       iconAnchor: [6, 6],
     })
-    for (const stop of stopOverlay.stops ?? []) {
+    for (const stop of stopOverlay?.stops ?? []) {
       refs.stopMarkers.push(
         L.marker([stop.lat, stop.lng], { icon: stopIcon }).addTo(map).bindTooltip(stop.name),
       )
@@ -451,11 +483,18 @@ function syncOsm(
   }
 
   const pts = hasOverlays
-    ? overlays.flatMap((overlay) => [...overlay.outboundPath, ...(overlay.inboundPath ?? [])])
+    ? [
+        ...overlays.flatMap((overlay) => [...overlay.outboundPath, ...(overlay.inboundPath ?? [])]),
+        ...(stopOverlay?.stops ?? []),
+      ]
     : [...(outboundPath ?? []), ...(inboundPath ?? [])]
   if (origin) pts.push(origin)
   if (dest) pts.push(dest)
-  if (pts.length >= 2) {
-    map.fitBounds(pts.map((p) => [p.lat, p.lng]) as [number, number][])
+  if (pts.length === 0) return
+  if (pts.length === 1) {
+    const [point] = pts
+    map.setView([point.lat, point.lng], 13)
+    return
   }
+  map.fitBounds(pts.map((p) => [p.lat, p.lng]) as [number, number][])
 }
