@@ -1,0 +1,7 @@
+.map-stop {
+  width: 12px;
+  height: 12px;
+  background: #1c1a16;
+  border: 2px solid #fbf8f1;
+  box-sizing: border-box;
+}
