@@ -2,12 +2,16 @@ import { useEffect, useRef } from 'react'
 import type { LatLng } from '../types'
 import { loadMapsJs } from '../lib/google'
 import { getGoogleApiKey } from '../lib/config'
+import { overlayPolylineStyle, type RouteOverlay } from './map-overlays'
+
+const EMPTY_ROUTE_OVERLAYS: RouteOverlay[] = []
 
 type MapViewProps = {
   origin?: LatLng
   dest?: LatLng
   outboundPath?: LatLng[]
   inboundPath?: LatLng[]
+  overlays?: RouteOverlay[]
   useGoogle: boolean
   onPinsChange: (origin: LatLng, dest: LatLng) => void
 }
@@ -172,16 +176,12 @@ function OsmMapCanvas({
   dest,
   outboundPath,
   inboundPath,
+  overlays,
   onPinsChange,
 }: MapViewProps) {
+  const routeOverlays = overlays ?? EMPTY_ROUTE_OVERLAYS
   const elRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<{
-    map?: import('leaflet').Map
-    originMarker?: import('leaflet').Marker
-    destMarker?: import('leaflet').Marker
-    outLine?: import('leaflet').Polyline
-    inLine?: import('leaflet').Polyline
-  }>({})
+  const mapRef = useRef<OsmMapRefs>({ overlayLines: [], stopMarkers: [] })
 
   useEffect(() => {
     const el = elRef.current
@@ -189,6 +189,7 @@ function OsmMapCanvas({
     let cancelled = false
     void import('leaflet').then(async (L) => {
       await import('leaflet/dist/leaflet.css')
+      await import('../map-overlays.css')
       if (cancelled || !elRef.current) return
       const center = origin ?? dest ?? { lat: 23.6, lng: -102.5 }
       const map = L.map(elRef.current).setView(
@@ -232,62 +233,122 @@ function OsmMapCanvas({
       })
       mapRef.current = {
         map,
+        leaflet: L,
         originMarker,
         destMarker,
         outLine: L.polyline([], { color: '#1c4b73', weight: 4 }).addTo(map),
         inLine: L.polyline([], { color: '#8a4b12', weight: 3, opacity: 0.7 }).addTo(map),
+        overlayLines: [],
+        stopMarkers: [],
       }
-      syncOsm(mapRef.current, origin, dest, outboundPath, inboundPath)
+      syncOsm(mapRef.current, origin, dest, outboundPath, inboundPath, routeOverlays)
     })
     return () => {
       cancelled = true
       mapRef.current.map?.remove()
-      mapRef.current = {}
+      mapRef.current = { overlayLines: [], stopMarkers: [] }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    syncOsm(mapRef.current, origin, dest, outboundPath, inboundPath)
-  }, [origin, dest, outboundPath, inboundPath])
+    syncOsm(mapRef.current, origin, dest, outboundPath, inboundPath, routeOverlays)
+  }, [origin, dest, outboundPath, inboundPath, routeOverlays])
 
   return <div className="route-map" ref={elRef} role="img" aria-label="Mapa de la ruta" />
 }
 
+type OsmMapRefs = {
+  map?: import('leaflet').Map
+  leaflet?: typeof import('leaflet')
+  originMarker?: import('leaflet').Marker
+  destMarker?: import('leaflet').Marker
+  outLine?: import('leaflet').Polyline
+  inLine?: import('leaflet').Polyline
+  overlayLines: import('leaflet').Polyline[]
+  stopMarkers: import('leaflet').Marker[]
+}
+
 function syncOsm(
-  refs: {
-    map?: import('leaflet').Map
-    originMarker?: import('leaflet').Marker
-    destMarker?: import('leaflet').Marker
-    outLine?: import('leaflet').Polyline
-    inLine?: import('leaflet').Polyline
-  },
+  refs: OsmMapRefs,
   origin?: LatLng,
   dest?: LatLng,
   outboundPath?: LatLng[],
   inboundPath?: LatLng[],
+  overlays: RouteOverlay[] = [],
 ) {
-  if (!refs.map) return
+  const map = refs.map
+  const L = refs.leaflet
+  if (!map || !L) return
   if (origin) {
     refs.originMarker?.setLatLng([origin.lat, origin.lng])
-    refs.originMarker?.addTo(refs.map)
+    refs.originMarker?.addTo(map)
     refs.originMarker?.dragging?.enable()
   } else {
     refs.originMarker?.remove()
   }
   if (dest) {
     refs.destMarker?.setLatLng([dest.lat, dest.lng])
-    refs.destMarker?.addTo(refs.map)
+    refs.destMarker?.addTo(map)
     refs.destMarker?.dragging?.enable()
   } else {
     refs.destMarker?.remove()
   }
-  refs.outLine?.setLatLngs((outboundPath ?? []).map((p) => [p.lat, p.lng]))
-  refs.inLine?.setLatLngs((inboundPath ?? []).map((p) => [p.lat, p.lng]))
-  const pts = [...(outboundPath ?? []), ...(inboundPath ?? [])]
+  refs.overlayLines.forEach((line) => line.remove())
+  refs.stopMarkers.forEach((marker) => marker.remove())
+  refs.overlayLines = []
+  refs.stopMarkers = []
+
+  const hasOverlays = overlays.length > 0
+  if (hasOverlays) {
+    refs.outLine?.setLatLngs([])
+    refs.inLine?.setLatLngs([])
+
+    const orderedOverlays = [
+      ...overlays.filter((overlay) => !overlay.focused),
+      ...overlays.filter((overlay) => overlay.focused),
+    ]
+    for (const overlay of orderedOverlays) {
+      const style = overlayPolylineStyle({ focused: Boolean(overlay.focused) })
+      const paths = [overlay.outboundPath, ...(overlay.inboundPath ? [overlay.inboundPath] : [])]
+      for (const path of paths) {
+        refs.overlayLines.push(
+          L.polyline(
+            path.map((point) => [point.lat, point.lng] as [number, number]),
+            {
+              color: style.color,
+              weight: style.weight,
+              opacity: style.opacity,
+              dashArray: style.dashArray,
+            },
+          ).addTo(map),
+        )
+      }
+    }
+
+    const stopOverlay = overlays.find((overlay) => overlay.focused) ?? overlays[0]
+    const stopIcon = L.divIcon({
+      className: 'map-stop',
+      html: '',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6],
+    })
+    for (const stop of stopOverlay.stops ?? []) {
+      refs.stopMarkers.push(
+        L.marker([stop.lat, stop.lng], { icon: stopIcon }).addTo(map).bindTooltip(stop.name),
+      )
+    }
+  } else {
+    refs.outLine?.setLatLngs((outboundPath ?? []).map((p) => [p.lat, p.lng]))
+    refs.inLine?.setLatLngs((inboundPath ?? []).map((p) => [p.lat, p.lng]))
+  }
+
+  const pts = hasOverlays
+    ? overlays.flatMap((overlay) => [...overlay.outboundPath, ...(overlay.inboundPath ?? [])])
+    : [...(outboundPath ?? []), ...(inboundPath ?? [])]
   if (origin) pts.push(origin)
   if (dest) pts.push(dest)
   if (pts.length >= 2) {
-    refs.map.fitBounds(pts.map((p) => [p.lat, p.lng]) as [number, number][])
+    map.fitBounds(pts.map((p) => [p.lat, p.lng]) as [number, number][])
   }
 }
