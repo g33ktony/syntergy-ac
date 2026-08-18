@@ -70,6 +70,106 @@ describe('lookupTripViaStops', () => {
       { lat: 20, lng: -100 },
       { lat: 21, lng: -101 },
     ])
+    expect(route?.inbound).toBeUndefined()
+  })
+
+  it('sums elevation gain and loss from each stitched leg', async () => {
+    const stop: ChargingPoi = { id: 'poi-1', name: 'Stop', lat: 20, lng: -100 }
+    const lookup = async (options: LookupTripOptions): Promise<Route> => {
+      const from = options.query.from as { lat: number; lng: number }
+      const to = options.query.to as { lat: number; lng: number }
+      const first = from.lat === 19
+      return {
+        id: 'leg',
+        from: 'a',
+        to: 'b',
+        distanceKm: 100,
+        source: 'osm',
+        elevationGainM: first ? 200 : 300,
+        elevationLossM: first ? 50 : 80,
+        outbound: {
+          distanceKm: 100,
+          driveHours: 1,
+          path: [from, to],
+          elevationGainM: first ? 200 : 300,
+          elevationLossM: first ? 50 : 80,
+        },
+      }
+    }
+
+    const route = await lookupTripViaStops({
+      origin: { lat: 19, lng: -99 },
+      dest: { lat: 21, lng: -101 },
+      stops: [stop],
+      roundTrip: false,
+      preference: 'both',
+      lookup,
+    })
+
+    expect(route).not.toBeNull()
+    expect(route?.outbound?.elevationGainM).toBe(500)
+    expect(route?.outbound?.elevationLossM).toBe(130)
+    expect(route?.elevationGainM).toBe(500)
+    expect(route?.elevationLossM).toBe(130)
+  })
+
+  it('fills inbound when roundTrip is true and omits it one-way', async () => {
+    const stop: ChargingPoi = { id: 'poi-1', name: 'Stop', lat: 20, lng: -100 }
+    const lookup = async (options: LookupTripOptions): Promise<Route> => {
+      expect(options.query.roundTrip).toBe(false)
+      const from = options.query.from as { lat: number; lng: number }
+      const to = options.query.to as { lat: number; lng: number }
+      const northbound = from.lat < to.lat
+      return {
+        id: 'leg',
+        from: 'a',
+        to: 'b',
+        distanceKm: northbound ? 100 : 90,
+        source: 'osm',
+        elevationGainM: northbound ? 200 : 40,
+        elevationLossM: northbound ? 50 : 10,
+        outbound: {
+          distanceKm: northbound ? 100 : 90,
+          driveHours: northbound ? 1 : 0.9,
+          path: [from, to],
+          elevationGainM: northbound ? 200 : 40,
+          elevationLossM: northbound ? 50 : 10,
+        },
+      }
+    }
+
+    const roundTrip = await lookupTripViaStops({
+      origin: { lat: 19, lng: -99 },
+      dest: { lat: 21, lng: -101 },
+      stops: [stop],
+      roundTrip: true,
+      preference: 'both',
+      lookup,
+    })
+
+    expect(roundTrip).not.toBeNull()
+    expect(roundTrip?.inbound).toBeDefined()
+    expect(roundTrip?.inbound?.path).toEqual([
+      { lat: 21, lng: -101 },
+      { lat: 20, lng: -100 },
+      { lat: 19, lng: -99 },
+    ])
+    expect(roundTrip?.inbound?.distanceKm).toBe(180)
+    expect(roundTrip?.inbound?.driveHours).toBeCloseTo(1.8)
+    expect(roundTrip?.inbound?.elevationGainM).toBe(80)
+    expect(roundTrip?.inbound?.elevationLossM).toBe(20)
+    expect(roundTrip?.outbound?.elevationGainM).toBe(400)
+    expect(roundTrip?.outbound?.elevationLossM).toBe(100)
+
+    const oneWay = await lookupTripViaStops({
+      origin: { lat: 19, lng: -99 },
+      dest: { lat: 21, lng: -101 },
+      stops: [stop],
+      roundTrip: false,
+      preference: 'both',
+      lookup,
+    })
+    expect(oneWay?.inbound).toBeUndefined()
   })
 
   it('returns null when a leg fails', async () => {
