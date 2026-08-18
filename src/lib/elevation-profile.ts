@@ -39,6 +39,41 @@ export function pathLengthKm(path: LatLng[]): number {
   return total
 }
 
+/** Distance along `path` to the nearest projection of `point` onto a segment. */
+export function alongKmOnPath(path: LatLng[], point: LatLng): number {
+  if (path.length < 2) return 0
+  let bestDist = Infinity
+  let bestAlong = 0
+  let acc = 0
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1]!
+    const b = path[i]!
+    const segKm = haversineKm(a, b)
+    const dLat = b.lat - a.lat
+    const dLng = b.lng - a.lng
+    const seg2 = dLat * dLat + dLng * dLng
+    const t =
+      seg2 === 0
+        ? 0
+        : Math.max(0, Math.min(1, ((point.lat - a.lat) * dLat + (point.lng - a.lng) * dLng) / seg2))
+    const proj = { lat: a.lat + dLat * t, lng: a.lng + dLng * t }
+    const dist = haversineKm(point, proj)
+    if (dist < bestDist) {
+      bestDist = dist
+      bestAlong = acc + t * segKm
+    }
+    acc += segKm
+  }
+  return bestAlong
+}
+
+/** `alongKmOnPath` scaled so the path end equals `lengthKm` (router distance). */
+export function alongKmOnPathScaled(path: LatLng[], point: LatLng, lengthKm: number): number {
+  const geom = pathLengthKm(path)
+  const along = alongKmOnPath(path, point)
+  return geom > 0 ? (along / geom) * lengthKm : along
+}
+
 /** Evenly pick at most `maxPoints` vertices (OpenTopoData cap is 100). */
 export function samplePath(path: LatLng[], maxPoints = 100): LatLng[] {
   if (path.length <= maxPoints) return path

@@ -7,14 +7,20 @@ import {
   RESERVE_PERCENT,
 } from '../lib/constants'
 import { bevKWhPerKm, lookupTripViaStopsFromConfig } from '../lib/charge-legs'
-import { planChargeStops, type ChargePlan } from '../lib/charge-plan'
+import {
+  arrivalSocOnPath,
+  inboundPlanGeometry,
+  planChargeStops,
+  poisForInboundPlan,
+  type ChargePlan,
+} from '../lib/charge-plan'
+import { alongKmOnPathScaled } from '../lib/elevation-profile'
 import { POWERTRAIN_GROUP_LABELS, POWERTRAIN_GROUP_ORDER } from '../lib/format'
 import { tollCostForTripMode } from '../lib/tolls'
 import type { SlotSelection } from '../lib/slots'
 import type {
   AnyVehicle,
   AnyVersion,
-  ChargingPoi,
   DriveStyle,
   FuelType,
   Route,
@@ -317,50 +323,74 @@ export function VehicleSlot({
       return
     }
 
-    let inboundStops: ChargingPoi[] | undefined
-    if (mode === 'roundTrip') {
-      const inboundLengthKm = route.inbound?.distanceKm ?? route.distanceKm
-      const inboundPath =
-        route.inbound?.path && route.inbound.path.length > 0
-          ? route.inbound.path
-          : [...path].reverse()
-      const inboundPois = planInput.pois.map((poi) =>
-        poi.alongKm === undefined
-          ? poi
-          : { ...poi, alongKm: inboundLengthKm - poi.alongKm },
-      )
-      const inboundPlan = planChargeStops({
-        ...planInput,
-        path: inboundPath,
-        pathLengthKm: inboundLengthKm,
-        pois: inboundPois,
-        startSocPercent: outboundPlan.arrivalSocPercent,
-      })
-      if (!inboundPlan.feasible) {
-        setChargePlanBusy(false)
-        setChargePlanError(chargePlanFailureMessage(inboundPlan.reason))
-        clearChargeRoute()
-        return
-      }
-      inboundStops = inboundPlan.stops.map((s) => s.poi)
-    }
-
     void (async () => {
-      const stitched = await lookupTripViaStopsFromConfig({
+      const outboundStops = outboundPlan.stops.map((s) => s.poi)
+      const outboundStitched = await lookupTripViaStopsFromConfig({
         origin,
         dest,
-        stops: outboundPlan.stops.map((s) => s.poi),
-        inboundStops,
-        roundTrip: mode === 'roundTrip',
+        stops: outboundStops,
+        roundTrip: false,
         preference: 'both',
       })
       if (cancelled) return
-      setChargePlanBusy(false)
-      if (!stitched) {
+      if (!outboundStitched) {
+        setChargePlanBusy(false)
         setChargePlanError('No se pudo trazar la ruta con paradas de carga. Se usa la ruta base.')
         clearChargeRoute()
         return
       }
+
+      let stitched = outboundStitched
+      if (mode === 'roundTrip') {
+        const lastStop = outboundPlan.stops.at(-1)
+        const stitchedPath = outboundStitched.outbound?.path
+        const lastChargeAlongKm =
+          lastStop && stitchedPath && stitchedPath.length >= 2
+            ? alongKmOnPathScaled(stitchedPath, lastStop.poi, outboundStitched.distanceKm)
+            : lastStop?.alongKm
+        const inboundStartSoc = arrivalSocOnPath({
+          pathLengthKm: outboundStitched.distanceKm,
+          batteryKWh: bevVersion.batteryKWh,
+          kWhPerKm,
+          startSocPercent: 100,
+          chargeToPercent: CHARGE_TARGET_PERCENT,
+          lastChargeAlongKm,
+        })
+        const inboundGeom = inboundPlanGeometry(path, route.distanceKm, route.inbound)
+        const inboundPlan = planChargeStops({
+          ...planInput,
+          path: inboundGeom.path,
+          pathLengthKm: inboundGeom.pathLengthKm,
+          pois: poisForInboundPlan(planInput.pois, route.distanceKm, inboundGeom),
+          startSocPercent: inboundStartSoc,
+        })
+        if (!inboundPlan.feasible) {
+          setChargePlanBusy(false)
+          setChargePlanError(chargePlanFailureMessage(inboundPlan.reason))
+          clearChargeRoute()
+          return
+        }
+        const roundTrip = await lookupTripViaStopsFromConfig({
+          origin,
+          dest,
+          stops: outboundStops,
+          inboundStops: inboundPlan.stops.map((s) => s.poi),
+          outboundRoute: outboundStitched,
+          roundTrip: true,
+          preference: 'both',
+        })
+        if (cancelled) return
+        if (!roundTrip) {
+          setChargePlanBusy(false)
+          setChargePlanError('No se pudo trazar la ruta con paradas de carga. Se usa la ruta base.')
+          clearChargeRoute()
+          return
+        }
+        stitched = roundTrip
+      }
+
+      if (cancelled) return
+      setChargePlanBusy(false)
       setViaStopsRoute(stitched)
       onSlotRouteChangeRef.current?.(stitched)
     })()

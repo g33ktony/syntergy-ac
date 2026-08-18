@@ -1,4 +1,5 @@
 import type { ChargingPoi, LatLng } from '../types'
+import { alongKmOnPathScaled, pathLengthKm as geometryLengthKm } from './elevation-profile'
 
 export function poiMatchesConnector(
   connector: 'CCS1' | 'GB/T' | 'NACS' | 'other',
@@ -32,6 +33,65 @@ export type ChargePlanInput = {
   chargeToPercent: number
   maxStops: number
   connector: 'CCS1' | 'GB/T' | 'NACS' | 'other'
+}
+
+export type InboundPlanGeometry = {
+  path: LatLng[]
+  pathLengthKm: number
+  fromInboundGeometry: boolean
+}
+
+/** Path + length the inbound planner should use; never mix outbound alongKm with a different length. */
+export function inboundPlanGeometry(
+  outboundPath: LatLng[],
+  outboundLengthKm: number,
+  inbound?: { path?: LatLng[]; distanceKm?: number },
+): InboundPlanGeometry {
+  const fromInboundGeometry = Boolean(inbound?.path && inbound.path.length > 0)
+  const path = fromInboundGeometry ? inbound!.path! : [...outboundPath].reverse()
+  const pathLengthKm =
+    inbound?.distanceKm ?? (fromInboundGeometry ? geometryLengthKm(path) : outboundLengthKm)
+  return { path, pathLengthKm, fromInboundGeometry }
+}
+
+/** Place POIs on the inbound path in the same units as `inbound.pathLengthKm`. */
+export function poisForInboundPlan(
+  pois: ChargingPoi[],
+  outboundLengthKm: number,
+  inbound: InboundPlanGeometry,
+): ChargingPoi[] {
+  if (inbound.fromInboundGeometry) {
+    return pois.map((poi) => ({
+      ...poi,
+      alongKm: alongKmOnPathScaled(inbound.path, poi, inbound.pathLengthKm),
+    }))
+  }
+  if (outboundLengthKm <= 0) {
+    return pois.map((poi) =>
+      poi.alongKm === undefined ? poi : { ...poi, alongKm: inbound.pathLengthKm },
+    )
+  }
+  return pois.map((poi) =>
+    poi.alongKm === undefined
+      ? poi
+      : { ...poi, alongKm: inbound.pathLengthKm * (1 - poi.alongKm / outboundLengthKm) },
+  )
+}
+
+/** Arrival SoC after driving `pathLengthKm`, charging to `chargeToPercent` at `lastChargeAlongKm` if set. */
+export function arrivalSocOnPath(input: {
+  pathLengthKm: number
+  batteryKWh: number
+  kWhPerKm: number
+  startSocPercent: number
+  chargeToPercent: number
+  lastChargeAlongKm?: number
+}): number {
+  const charged = input.lastChargeAlongKm != null
+  const soc = charged ? input.chargeToPercent : input.startSocPercent
+  const fromKm = input.lastChargeAlongKm ?? 0
+  const remainingKm = Math.max(0, input.pathLengthKm - fromKm)
+  return soc - (100 * (remainingKm * input.kWhPerKm)) / input.batteryKWh
 }
 
 export function planChargeStops(input: ChargePlanInput): ChargePlan {

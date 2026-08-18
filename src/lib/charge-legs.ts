@@ -28,6 +28,8 @@ export type LookupTripViaStopsOptions = {
   stops: ChargingPoi[]
   /** When set (including `[]`), used for the return instead of reversing `stops`. */
   inboundStops?: ChargingPoi[]
+  /** Reuse a previously stitched outbound instead of fetching origin→stops→dest again. */
+  outboundRoute?: Route
   roundTrip: boolean
   preference: RouteSourcePreference
   lookup: typeof lookupTrip
@@ -76,7 +78,22 @@ export async function lookupTripViaStops(options: LookupTripViaStopsOptions): Pr
   const outboundWaypoints: PlaceRef[] = [options.origin, ...stopPlaces(options.stops), options.dest]
 
   try {
-    const outbound = await stitchLegs(outboundWaypoints, options)
+    const outbound = options.outboundRoute?.outbound
+      ? {
+          distanceKm: options.outboundRoute.distanceKm,
+          driveHours:
+            options.outboundRoute.driveHoursOneWay ?? options.outboundRoute.outbound.driveHours,
+          path: options.outboundRoute.outbound.path,
+          elevationGainM:
+            options.outboundRoute.outbound.elevationGainM ??
+            options.outboundRoute.elevationGainM ??
+            0,
+          elevationLossM:
+            options.outboundRoute.outbound.elevationLossM ??
+            options.outboundRoute.elevationLossM ??
+            0,
+        }
+      : await stitchLegs(outboundWaypoints, options)
     const inboundStopList =
       options.inboundStops !== undefined
         ? options.inboundStops

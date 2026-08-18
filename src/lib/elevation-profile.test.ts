@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  alongKmOnPath,
+  alongKmOnPathScaled,
   gainLossFromElevations,
+  pathLengthKm,
   samplePath,
   samplePathEveryKm,
 } from './elevation-profile'
@@ -30,6 +33,18 @@ describe('samplePath', () => {
     expect(sampled).toHaveLength(5)
     expect(sampled[0]).toEqual(path[0])
     expect(sampled[4]).toEqual(path[49])
+  })
+})
+
+describe('alongKmOnPath', () => {
+  it('measures distance along the polyline to the nearest projection', () => {
+    const path = [
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 1 },
+    ]
+    expect(alongKmOnPath(path, { lat: 0, lng: 0 })).toBeCloseTo(0, 5)
+    expect(alongKmOnPath(path, { lat: 0, lng: 1 })).toBeCloseTo(pathLengthKm(path), 5)
+    expect(alongKmOnPathScaled(path, { lat: 0, lng: 1 }, 120)).toBeCloseTo(120, 5)
   })
 })
 
