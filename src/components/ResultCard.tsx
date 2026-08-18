@@ -1,5 +1,6 @@
 import type { TripResult, TripMode, UnitSystem } from '../types'
 import { formatHours, formatLocaleNumber, formatMxn } from '../lib/format'
+import { reserveStatusCopy } from '../lib/reserve-copy'
 import {
   formatAvgSpeedRow,
   formatElevationRow,
@@ -41,6 +42,8 @@ function Metrics({
     | 'chargeStopsEstimate'
     | 'chargeStopsRoundTripEstimate'
     | 'connector'
+    | 'costPerKm'
+    | 'co2Kg'
   >
   label?: string
   unitSystem: UnitSystem
@@ -94,17 +97,18 @@ function Metrics({
             }
           >
             {formatLocaleNumber(Math.max(result.arrivalSocPercent, 0), 0)}%
-            {result.reachesWithReserve
-              ? ' · alcanza (reserva 15%)'
-              : ' · no alcanza con reserva'}
+            <span className="form-hint">
+              {' '}
+              {reserveStatusCopy(result.reachesWithReserve)}
+            </span>
           </dd>
         </div>
         <div>
-          <dt>Paradas de carga (est.)</dt>
+          <dt>Paradas de carga</dt>
           <dd>
             {result.chargeStopsEstimate}
-            {result.chargeStopsRoundTripEstimate != null
-              ? ` · redondo ~${result.chargeStopsRoundTripEstimate}`
+            {result.chargeStopsRoundTripEstimate
+              ? ` · redondo ${result.chargeStopsRoundTripEstimate}`
               : null}
           </dd>
         </div>
@@ -128,6 +132,14 @@ function Metrics({
             </div>
           </>
         ) : null}
+        <div>
+          <dt>Costo por km</dt>
+          <dd>{formatMxn(result.costPerKm)}</dd>
+        </div>
+        <div>
+          <dt>CO₂ (est.)</dt>
+          <dd>{formatLocaleNumber(result.co2Kg, 1)} kg</dd>
+        </div>
       </dl>
     </div>
   )

@@ -106,6 +106,14 @@ function Metrics({
             </div>
           </>
         ) : null}
+        <div>
+          <dt>Costo por km</dt>
+          <dd>{formatMxn(result.costPerKm)}</dd>
+        </div>
+        <div>
+          <dt>CO₂ (est.)</dt>
+          <dd>{formatLocaleNumber(result.co2Kg, 1)} kg</dd>
+        </div>
       </dl>
     </div>
   )

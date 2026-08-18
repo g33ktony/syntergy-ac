@@ -27,6 +27,7 @@ type VehicleSlotProps = {
   vehicles: AnyVehicle[]
   selection: SlotSelection
   onChange: (next: SlotSelection) => void
+  onRemove?: () => void
   route: Route | null
   mode: TripMode
   driveStyle: DriveStyle
@@ -192,6 +193,7 @@ export function VehicleSlot({
   vehicles,
   selection,
   onChange,
+  onRemove,
   route,
   mode,
   driveStyle,
@@ -229,6 +231,11 @@ export function VehicleSlot({
     <section className="vehicle-slot" aria-label={`Vehículo ${slotIndex + 1}`}>
       <header className="slot-header">
         <span className="slot-index">Vehículo {slotIndex + 1}</span>
+        {onRemove ? (
+          <button type="button" className="btn-text" onClick={onRemove}>
+            Quitar
+          </button>
+        ) : null}
         {vehicle ? (
           <PowertrainBadge type={vehicle.type} fuel={versionFuel(version)} />
         ) : null}

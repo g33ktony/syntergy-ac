@@ -8,7 +8,8 @@ import {
 } from './components/VehicleSlot'
 import { presetRoutes } from './data/routes'
 import { getAllMultiFuelVehicles } from './data/vehicles-multifuel'
-import { DEFAULT_PRICE_PER_KWH, DEFAULT_PRICE_PER_LITER } from './lib/constants'
+import { DEFAULT_HIGHWAY_KMH, DEFAULT_PRICE_PER_KWH, DEFAULT_PRICE_PER_LITER } from './lib/constants'
+import { seedAverageSpeedKmh } from './lib/speed-factor'
 import {
   loadCustomRoutes,
   loadRouteSourcePreference,
@@ -36,11 +37,8 @@ function App() {
   const [driveStyle, setDriveStyle] = useState<DriveStyle>('normal')
   const [pricePerKWh, setPricePerKWh] = useState(DEFAULT_PRICE_PER_KWH)
   const [pricePerLiter, setPricePerLiter] = useState(DEFAULT_PRICE_PER_LITER)
-  const [slots, setSlots] = useState<SlotSelection[]>([
-    EMPTY_SLOT,
-    EMPTY_SLOT,
-    EMPTY_SLOT,
-  ])
+  const [averageSpeedKmh, setAverageSpeedKmh] = useState(DEFAULT_HIGHWAY_KMH)
+  const [slots, setSlots] = useState<SlotSelection[]>([EMPTY_SLOT])
   const [apiKeyEpoch, setApiKeyEpoch] = useState(0)
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(() =>
     loadUnitSystem(),
@@ -60,18 +58,24 @@ function App() {
     setSlots((prev) => prev.map((s, i) => (i === index ? next : s)))
   }
 
+  function applyLookedUpRoute(route: Route) {
+    setAverageSpeedKmh(seedAverageSpeedKmh(route))
+    setSelectedRouteId(route.id)
+  }
+
   function handleLookedUpRoute(route: Route) {
     setGoogleRoutes((prev) => [route, ...prev].slice(0, 5))
-    setSelectedRouteId(route.id)
+    applyLookedUpRoute(route)
   }
 
   function handleSelectedRouteChange(route: Route) {
     setGoogleRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
     setCustomRoutes((prev) => prev.map((r) => (r.id === route.id ? route : r)))
+    setAverageSpeedKmh(seedAverageSpeedKmh(route))
   }
 
   function handleCustomRouteCreated(route: Route) {
-    setSelectedRouteId(route.id)
+    applyLookedUpRoute(route)
   }
 
   function handleCustomRoutesChange(routes: Route[]) {
@@ -105,7 +109,10 @@ function App() {
         customRoutes={customRoutes}
         onCustomRoutesChange={handleCustomRoutesChange}
         onRouteCreated={handleCustomRouteCreated}
-        onSelectPreset={(route) => setSelectedRouteId(route.id)}
+        onSelectPreset={(route) => {
+          setAverageSpeedKmh(seedAverageSpeedKmh(route))
+          setSelectedRouteId(route.id)
+        }}
         onLookedUpRoute={handleLookedUpRoute}
         mode={mode}
         routeSourcePreference={routeSourcePreference}
@@ -126,6 +133,8 @@ function App() {
         unitSystem={unitSystem}
         onApplySuggestedPrice={setPricePerKWh}
         selectedRoute={selectedRoute}
+        averageSpeedKmh={averageSpeedKmh}
+        onAverageSpeedChange={setAverageSpeedKmh}
       />
 
       <section className="slots" aria-label="Comparación de vehículos">
@@ -136,21 +145,39 @@ function App() {
             vehicles={vehicles}
             selection={selection}
             onChange={(next) => updateSlot(index, next)}
+            onRemove={
+              slots.length > 1
+                ? () => setSlots((prev) => prev.filter((_, i) => i !== index))
+                : undefined
+            }
             route={selectedRoute}
             mode={mode}
             driveStyle={driveStyle}
             pricePerKWh={pricePerKWh}
             pricePerLiter={pricePerLiter}
             unitSystem={unitSystem}
+            averageSpeedKmh={averageSpeedKmh}
           />
         ))}
       </section>
+      {slots.length < 3 ? (
+        <p className="slots-actions">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setSlots((s) => [...s, EMPTY_SLOT])}
+          >
+            Agregar auto para comparar
+          </button>
+        </p>
+      ) : null}
 
       <p className="footnote">
         El consumo oficial (NEDC/CLTC) no es carretera real. Usamos un factor
-        MX y el estilo de manejo para aproximar. Las paradas de carga son
-        estimaciones por distancia; los puntos OpenChargeMap son de referencia.
-        Casetas: tabla MX aproximada, corrígela si tienes el dato real.
+        MX y el estilo de manejo para aproximar. Las paradas de carga son las
+        del planner cuando está activo; si no, cero. Los puntos OpenChargeMap
+        son de referencia. Casetas: tabla MX aproximada, corrígela si tienes
+        el dato real. CO₂ es orden de magnitud, no inventario oficial.
       </p>
     </main>
   )
