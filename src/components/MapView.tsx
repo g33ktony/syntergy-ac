@@ -26,18 +26,15 @@ function GoogleMapCanvas({
   dest,
   outboundPath,
   inboundPath,
+  overlays,
   onPinsChange,
 }: MapViewProps) {
+  const routeOverlays = overlays ?? EMPTY_ROUTE_OVERLAYS
   const elRef = useRef<HTMLDivElement>(null)
-  const mapsRef = useRef<{
-    map?: googleMap
-    originMarker?: googleMarker
-    destMarker?: googleMarker
-    outLine?: googleLine
-    inLine?: googleLine
-  }>({})
+  const mapsRef = useRef<GoogleMapRefs>({ overlayLines: [], stopMarkers: [] })
 
   useEffect(() => {
+    const refs = mapsRef.current
     const apiKey = getGoogleApiKey()
     const el = elRef.current
     if (!apiKey || !el) return
@@ -53,7 +50,7 @@ function GoogleMapCanvas({
         streetViewControl: false,
         fullscreenControl: false,
       })
-      mapsRef.current.map = map
+      refs.map = map
       const originMarker = new g.Marker({
         map,
         position: origin ?? center,
@@ -78,31 +75,32 @@ function GoogleMapCanvas({
         const d = latLngOf(destMarker)
         if (o && d) onPinsChange(o, d)
       })
-      mapsRef.current.originMarker = originMarker
-      mapsRef.current.destMarker = destMarker
-      mapsRef.current.outLine = new g.Polyline({
+      refs.originMarker = originMarker
+      refs.destMarker = destMarker
+      refs.outLine = new g.Polyline({
         map,
         strokeColor: '#1c4b73',
         strokeWeight: 4,
       })
-      mapsRef.current.inLine = new g.Polyline({
+      refs.inLine = new g.Polyline({
         map,
         strokeColor: '#8a4b12',
         strokeWeight: 3,
         strokeOpacity: 0.7,
       })
-      syncGoogle(mapsRef.current, origin, dest, outboundPath, inboundPath)
+      syncGoogle(refs, origin, dest, outboundPath, inboundPath, routeOverlays)
     })
     return () => {
       cancelled = true
+      clearGoogleOverlays(refs)
     }
     // Intentionally once: subsequent updates go through the sync effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    syncGoogle(mapsRef.current, origin, dest, outboundPath, inboundPath)
-  }, [origin, dest, outboundPath, inboundPath])
+    syncGoogle(mapsRef.current, origin, dest, outboundPath, inboundPath, routeOverlays)
+  }, [origin, dest, outboundPath, inboundPath, routeOverlays])
 
   return <div className="route-map" ref={elRef} role="img" aria-label="Mapa de la ruta" />
 }
@@ -114,13 +112,24 @@ type googleMarker = {
   addListener: (ev: string, fn: () => void) => void
   setVisible: (visible: boolean) => void
   setDraggable: (draggable: boolean) => void
+  setMap: (map: googleMap | null) => void
 }
-type googleLine = { setPath: (p: LatLng[]) => void }
+type googleLine = { setPath: (p: LatLng[]) => void; setMap: (map: googleMap | null) => void }
 type GoogleMapsUi = {
   Map: new (el: HTMLElement, opts: Record<string, unknown>) => googleMap
   Marker: new (opts: Record<string, unknown>) => googleMarker
   Polyline: new (opts: Record<string, unknown>) => googleLine
   LatLngBounds: new () => { extend: (p: LatLng) => void }
+}
+
+type GoogleMapRefs = {
+  map?: googleMap
+  originMarker?: googleMarker
+  destMarker?: googleMarker
+  outLine?: googleLine
+  inLine?: googleLine
+  overlayLines: googleLine[]
+  stopMarkers: googleMarker[]
 }
 
 function latLngOf(marker: googleMarker): LatLng | null {
@@ -130,17 +139,12 @@ function latLngOf(marker: googleMarker): LatLng | null {
 }
 
 function syncGoogle(
-  refs: {
-    map?: googleMap
-    originMarker?: googleMarker
-    destMarker?: googleMarker
-    outLine?: googleLine
-    inLine?: googleLine
-  },
+  refs: GoogleMapRefs,
   origin?: LatLng,
   dest?: LatLng,
   outboundPath?: LatLng[],
   inboundPath?: LatLng[],
+  overlays: RouteOverlay[] = [],
 ) {
   const g = window.google?.maps as unknown as GoogleMapsUi | undefined
   if (!g || !refs.map) return
@@ -160,15 +164,82 @@ function syncGoogle(
     refs.destMarker?.setVisible(false)
     refs.destMarker?.setDraggable(false)
   }
-  refs.outLine?.setPath(outboundPath ?? [])
-  refs.inLine?.setPath(inboundPath ?? [])
+  clearGoogleOverlays(refs)
+
+  const hasOverlays = overlays.length > 0
+  if (hasOverlays) {
+    refs.outLine?.setPath([])
+    refs.inLine?.setPath([])
+
+    const orderedOverlays = [
+      ...overlays.filter((overlay) => !overlay.focused),
+      ...overlays.filter((overlay) => overlay.focused),
+    ]
+    for (const overlay of orderedOverlays) {
+      const style = overlayPolylineStyle({ focused: Boolean(overlay.focused) })
+      const paths = [overlay.outboundPath, ...(overlay.inboundPath ? [overlay.inboundPath] : [])]
+      for (const path of paths) {
+        refs.overlayLines.push(
+          new g.Polyline({
+            map: refs.map,
+            path,
+            strokeColor: style.color,
+            strokeWeight: style.weight,
+            strokeOpacity: style.dashArray ? 0 : style.opacity,
+            ...(style.dashArray
+              ? {
+                  icons: [
+                    {
+                      icon: {
+                        path: 'M 0,-1 0,1',
+                        strokeColor: style.color,
+                        strokeOpacity: style.opacity,
+                        scale: 4,
+                      },
+                      offset: '0',
+                      repeat: '14px',
+                    },
+                  ],
+                }
+              : {}),
+          }),
+        )
+      }
+    }
+
+    const stopOverlay = overlays.find((overlay) => overlay.focused) ?? overlays[0]
+    for (const stop of stopOverlay.stops ?? []) {
+      refs.stopMarkers.push(
+        new g.Marker({
+          map: refs.map,
+          position: stop,
+          draggable: false,
+          label: 'C',
+          title: stop.name,
+        }),
+      )
+    }
+  } else {
+    refs.outLine?.setPath(outboundPath ?? [])
+    refs.inLine?.setPath(inboundPath ?? [])
+  }
+
   const bounds = new g.LatLngBounds()
-  const pts = [...(outboundPath ?? []), ...(inboundPath ?? [])]
+  const pts = hasOverlays
+    ? overlays.flatMap((overlay) => [...overlay.outboundPath, ...(overlay.inboundPath ?? [])])
+    : [...(outboundPath ?? []), ...(inboundPath ?? [])]
   if (origin) pts.push(origin)
   if (dest) pts.push(dest)
   if (pts.length === 0) return
   for (const p of pts) bounds.extend(p)
   refs.map.fitBounds(bounds)
+}
+
+function clearGoogleOverlays(refs: GoogleMapRefs) {
+  refs.overlayLines.forEach((line) => line.setMap(null))
+  refs.stopMarkers.forEach((marker) => marker.setMap(null))
+  refs.overlayLines = []
+  refs.stopMarkers = []
 }
 
 function OsmMapCanvas({
