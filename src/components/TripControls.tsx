@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { routeLabel } from '../data/routes'
 import { MAX_SPEED_KMH, MIN_SPEED_KMH } from '../lib/constants'
 import { clampSpeedKmh } from '../lib/speed-factor'
@@ -56,6 +57,41 @@ export function TripControls({
   onAverageSpeedChange,
 }: TripControlsProps) {
   const styleIndex = DRIVE_STYLE_OPTIONS.findIndex((o) => o.value === driveStyle)
+
+  const displayedSpeed =
+    unitSystem === 'imperial'
+      ? Math.round(kmhToMph(averageSpeedKmh))
+      : Math.round(averageSpeedKmh)
+  const [speedDraft, setSpeedDraft] = useState(String(displayedSpeed))
+
+  useEffect(() => {
+    setSpeedDraft(String(displayedSpeed))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedSpeed])
+
+  /** Live-applies each keystroke unclamped (calc functions clamp internally);
+   * clamping here would fight the user mid-type (e.g. "9" of "90" snapping to
+   * the 40 floor) on every platform, and especially on mobile where there's
+   * no arrow key to nudge back out of the snap. */
+  function handleSpeedChange(raw: string) {
+    setSpeedDraft(raw)
+    if (raw.trim() === '') return
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return
+    const kmh = unitSystem === 'imperial' ? miToKm(n) : n
+    onAverageSpeedChange(kmh)
+  }
+
+  /** Safety net once the user is done: clamp into range, or revert if empty/invalid. */
+  function commitSpeedDraft() {
+    const n = Number(speedDraft)
+    if (speedDraft.trim() === '' || !Number.isFinite(n)) {
+      setSpeedDraft(String(displayedSpeed))
+      return
+    }
+    const kmh = unitSystem === 'imperial' ? miToKm(n) : n
+    onAverageSpeedChange(clampSpeedKmh(kmh))
+  }
 
   return (
     <section className="trip-controls" aria-labelledby="trip-controls-heading">
@@ -135,16 +171,11 @@ export function TripControls({
                 : MAX_SPEED_KMH
             }
             step={1}
-            value={
-              unitSystem === 'imperial'
-                ? Math.round(kmhToMph(averageSpeedKmh))
-                : Math.round(averageSpeedKmh)
-            }
-            onChange={(e) => {
-              const n = Number(e.target.value)
-              if (!Number.isFinite(n)) return
-              const kmh = unitSystem === 'imperial' ? miToKm(n) : n
-              onAverageSpeedChange(clampSpeedKmh(kmh))
+            value={speedDraft}
+            onChange={(e) => handleSpeedChange(e.target.value)}
+            onBlur={commitSpeedDraft}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitSpeedDraft()
             }}
           />
           <span className="form-hint">
